@@ -1,0 +1,31 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.apache.pdfbox:pdfbox:2.0.30'
+    // JavaFX dependencies are handled by the javafxplugin
+}
+
+javafx {
+    version = "21"
+    modules = [ 'javafx.controls', 'javafx.fxml', 'javafx.graphics', 'javafx.swing' ]
+}
+
+application {
+    mainClass = 'de.posy.pdftrenner.Launcher'
+    applicationDefaultJvmArgs = [
+        '-Dglass.accessible.force=false',
+        '--enable-native-access=javafx.graphics,javafx.swing'
+    ]
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
