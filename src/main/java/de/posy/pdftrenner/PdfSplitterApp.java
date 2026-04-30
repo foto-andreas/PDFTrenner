@@ -7,10 +7,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.animation.PauseTransition;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
@@ -111,8 +113,18 @@ public class PdfSplitterApp extends Application {
         primaryStage.setTitle("Java PDF Splitter - " + new File(pdfPath).getName());
         primaryStage.setScene(scene);
         primaryStage.show();
-        primaryStage.toFront();
-        Platform.runLater(() -> primaryStage.requestFocus());
+
+        // Robuste Vordergrund-Aktivierung auf macOS
+        PauseTransition pt = new PauseTransition(Duration.millis(200));
+        pt.setOnFinished(e -> {
+            primaryStage.setAlwaysOnTop(true);
+            primaryStage.toFront();
+            primaryStage.requestFocus();
+            PauseTransition pt2 = new PauseTransition(Duration.millis(100));
+            pt2.setOnFinished(ev -> primaryStage.setAlwaysOnTop(false));
+            pt2.play();
+        });
+        pt.play();
 
         showPage();
     }
