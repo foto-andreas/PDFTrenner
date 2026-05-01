@@ -50,3 +50,6 @@ Manual_Splits/
 *.tmp
 *.temp
 *.log
+
+# Swift Package Manager
+.build/
