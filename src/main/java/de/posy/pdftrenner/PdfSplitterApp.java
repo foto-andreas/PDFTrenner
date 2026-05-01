@@ -146,9 +146,18 @@ public class PdfSplitterApp extends Application {
                 debug("Ausgewaehlt: " + pdfPath);
                 initPdfAndShow();
             } else {
-                debug("Abbruch, schliesse Anwendung");
+                debug("Abbruch, beende Anwendung");
+                delay.stop();
                 primaryStage.close();
                 Platform.exit();
+                // Notfall-Exit falls Platform.exit() nicht ausreicht
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(1000);
+                        debug("Notfall-System.exit(0)");
+                    } catch (InterruptedException ignored) {}
+                    System.exit(0);
+                }).start();
             }
         });
         delay.play();
