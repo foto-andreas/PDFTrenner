@@ -46,6 +46,9 @@ task prepareJpackageInput(type: Copy) {
     into jpackageInput
 }
 
+def debugMode = project.findProperty('debug') ?: System.getenv('PDFTRENNER_DEBUG') ?: 'false'
+def debugArg = debugMode.toString().toBoolean() ? ['--java-options', '-Dpdftrenner.debug=true'] : []
+
 def commonJpackageArgs = [
     '--name', appName,
     '--app-version', appVersion,
@@ -59,7 +62,7 @@ def commonJpackageArgs = [
     '--java-options', '--enable-native-access=javafx.graphics,javafx.swing',
     '--java-options', '-Dglass.accessible.force=false',
     '--java-options', '-Dprism.verbose=false'
-]
+] + debugArg
 
 def iconMac = file('src/main/resources/icon.icns')
 def iconWin = file('src/main/resources/icon.ico')

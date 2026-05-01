@@ -32,6 +32,8 @@ import java.util.concurrent.TimeUnit;
 
 public class PdfSplitterApp extends Application {
 
+    private static final boolean DEBUG = Boolean.getBoolean("pdftrenner.debug");
+
     private PDDocument document;
     private PDFRenderer renderer;
     private int currentPage = 0;
@@ -43,44 +45,82 @@ public class PdfSplitterApp extends Application {
     private Label statusLabel;
     private Stage primaryStage;
 
+    private static void debug(String msg) {
+        if (DEBUG) {
+            System.err.println("[DEBUG] " + msg);
+        }
+    }
+
     @Override
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
+        debug("start() aufgerufen");
 
         // Dock-Icon setzen
         try {
             Image icon = new Image(getClass().getResourceAsStream("/icon.png"));
             primaryStage.getIcons().add(icon);
+            debug("Dock-Icon gesetzt");
         } catch (Exception e) {
             System.err.println("Icon konnte nicht geladen werden: " + e.getMessage());
         }
 
         Parameters params = getParameters();
+        debug("Args: " + params.getRaw());
+
         if (!params.getRaw().isEmpty()) {
             pdfPath = params.getRaw().get(0);
+            debug("PDF aus Args: " + pdfPath);
             initPdfAndShow();
         } else {
-            // Minimale Stage sichtbar machen fuer FileChooser
-            primaryStage.setTitle("PDFTrenner");
-            primaryStage.setScene(new Scene(new StackPane(), 1, 1));
-            primaryStage.show();
-
-            Platform.runLater(() -> {
-                FileChooser fileChooser = new FileChooser();
-                fileChooser.setTitle("PDF-Datei auswaehlen");
-                fileChooser.getExtensionFilters().add(
-                    new FileChooser.ExtensionFilter("PDF-Dateien", "*.pdf", "*.PDF")
-                );
-                File selectedFile = fileChooser.showOpenDialog(primaryStage);
-                if (selectedFile != null) {
-                    pdfPath = selectedFile.getAbsolutePath();
-                    initPdfAndShow();
-                } else {
-                    primaryStage.close();
-                    Platform.exit();
-                }
-            });
+            debug("Keine Args, oeffne FileChooser");
+            openFileChooserAndInit();
         }
+    }
+
+    private void openFileChooserAndInit() {
+        debug("openFileChooserAndInit() start");
+
+        // Stage mit sichtbarer Groesse anzeigen
+        primaryStage.setTitle("PDFTrenner");
+        primaryStage.setScene(new Scene(new StackPane(), 400, 100));
+        primaryStage.setAlwaysOnTop(true);
+        primaryStage.show();
+        primaryStage.toFront();
+        debug("Stage angezeigt");
+
+        PauseTransition delay = new PauseTransition(Duration.millis(500));
+        delay.setOnFinished(e -> {
+            debug("Pause abgelaufen, oeffne FileChooser");
+            primaryStage.setAlwaysOnTop(false);
+
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("PDF-Datei auswaehlen");
+            fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("PDF-Dateien", "*.pdf", "*.PDF")
+            );
+
+            debug("FileChooser.showOpenDialog() vor Aufruf");
+            File selectedFile = null;
+            try {
+                selectedFile = fileChooser.showOpenDialog(primaryStage);
+            } catch (Exception ex) {
+                debug("Exception im FileChooser: " + ex);
+                ex.printStackTrace();
+            }
+            debug("FileChooser Ergebnis: " + selectedFile);
+
+            if (selectedFile != null) {
+                pdfPath = selectedFile.getAbsolutePath();
+                debug("Ausgewaehlt: " + pdfPath);
+                initPdfAndShow();
+            } else {
+                debug("Abbruch, schliesse Anwendung");
+                primaryStage.close();
+                Platform.exit();
+            }
+        });
+        delay.play();
     }
 
     private void initPdfAndShow() {
