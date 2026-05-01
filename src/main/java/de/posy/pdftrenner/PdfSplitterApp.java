@@ -79,6 +79,14 @@ public class PdfSplitterApp extends Application {
         }
     }
 
+    private void showError(String message) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.ERROR, message);
+            alert.initOwner(primaryStage);
+            alert.showAndWait();
+        });
+    }
+
     @Override
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -99,16 +107,13 @@ public class PdfSplitterApp extends Application {
 
         Parameters params = getParameters();
         if (!params.getRaw().isEmpty()) {
-            pdfPath = params.getRaw().get(0);
+            File f = new File(params.getRaw().get(0));
+            pdfPath = f.isAbsolute() ? f.getAbsolutePath() : new File(f.getPath()).getAbsolutePath();
             updateSplash("Lade: " + new File(pdfPath).getName());
-            PauseTransition pt = new PauseTransition(Duration.millis(100));
-            pt.setOnFinished(e -> initPdfAndShow());
-            pt.play();
+            Platform.runLater(this::initPdfAndShow);
         } else {
             updateSplash("Oeffne Dateiauswahl...");
-            PauseTransition pt = new PauseTransition(Duration.millis(150));
-            pt.setOnFinished(e -> openFileChooserAndInit());
-            pt.play();
+            Platform.runLater(this::openFileChooserAndInit);
         }
     }
 
@@ -158,19 +163,14 @@ public class PdfSplitterApp extends Application {
         } catch (Exception ex) {
             debug("Exception im FileChooser: " + ex);
             ex.printStackTrace();
-            Alert alert = new Alert(Alert.AlertType.ERROR,
-                    "Dateiauswahl-Dialog konnte nicht ge\u00f6ffnet werden:\n" + ex.getMessage());
-            alert.initOwner(primaryStage);
-            alert.showAndWait();
+            showError("Dateiauswahl-Dialog konnte nicht ge\u00f6ffnet werden:\n" + ex.getMessage());
         }
         debug("FileChooser Ergebnis: " + selectedFile);
 
         if (selectedFile != null) {
             pdfPath = selectedFile.getAbsolutePath();
             updateSplash("Lade: " + new File(pdfPath).getName());
-            PauseTransition pt = new PauseTransition(Duration.millis(50));
-            pt.setOnFinished(e -> initPdfAndShow());
-            pt.play();
+            Platform.runLater(this::initPdfAndShow);
         } else {
             debug("Abbruch, beende Anwendung");
             primaryStage.close();
@@ -186,10 +186,7 @@ public class PdfSplitterApp extends Application {
             renderer = new PDFRenderer(document);
         } catch (IOException e) {
             e.printStackTrace();
-            Alert alert = new Alert(Alert.AlertType.ERROR,
-                    "PDF konnte nicht geladen werden:\n" + e.getMessage());
-            alert.initOwner(primaryStage);
-            alert.showAndWait();
+            showError("PDF konnte nicht geladen werden:\n" + e.getMessage());
             primaryStage.close();
             Platform.exit();
             return;
