@@ -66,7 +66,55 @@ echo -n "APPL????" > "$APPDIR/Contents/PkgInfo"
 cp -R ${BINARY}/Assets.xcassets "$APPDIR/Contents/Resources/"
 
 # Generate icon
-ICON_SRC="${BINARY}/Assets.xcassets/AppIcon.appiconset/AppIcon_512.png"
+# Generate macOS-style icon (rounded corners + padding)
+echo "Generating macOS icon..."
+ORIG_ICON="icon_orig_512.png"
+ORIG_ICON_PATH="${BINARY}/Assets.xcassets/AppIcon.appiconset/${ORIG_ICON}"
+if [ ! -f "$ORIG_ICON_PATH" ]; then
+    ORIG_ICON="icon_512x512.png"
+    ORIG_ICON_PATH="${BINARY}/Assets.xcassets/AppIcon.appiconset/${ORIG_ICON}"
+fi
+
+ICON_MASTER="/tmp/pdftrenner_icon_master.png"
+python3 - "$ORIG_ICON_PATH" "$ICON_MASTER" << 'PYEOF'
+import sys
+from PIL import Image, ImageDraw, ImageChops
+
+CANVAS = 1024
+INSET = 0.178
+CORNER_RATIO = 0.2235
+
+src = Image.open(sys.argv[1]).convert("RGBA")
+sw, sh = src.size
+content_size = int(CANVAS * (1 - 2 * INSET))
+corner_radius = int(CANVAS * CORNER_RATIO)
+
+scale = content_size / max(sw, sh)
+new_w, new_h = int(sw * scale), int(sh * scale)
+src = src.resize((new_w, new_h), Image.LANCZOS)
+
+canvas = Image.new('RGBA', (CANVAS, CANVAS), (0, 0, 0, 0))
+draw = ImageDraw.Draw(canvas)
+draw.rounded_rectangle([0, 0, CANVAS - 1, CANVAS - 1], radius=corner_radius, fill=(255, 255, 255, 255))
+
+content = Image.new('RGBA', (CANVAS, CANVAS), (0, 0, 0, 0))
+x, y = (CANVAS - new_w) // 2, (CANVAS - new_h) // 2
+content.paste(src, (x, y), src)
+
+mask = Image.new('L', (CANVAS, CANVAS), 0)
+ImageDraw.Draw(mask).rounded_rectangle([0, 0, CANVAS - 1, CANVAS - 1], radius=corner_radius, fill=255)
+content_alpha = content.split()[3]
+masked_alpha = ImageChops.multiply(content_alpha, mask)
+content.putalpha(masked_alpha)
+
+result = Image.alpha_composite(canvas, content)
+border = Image.new('RGBA', (CANVAS, CANVAS), (0, 0, 0, 0))
+ImageDraw.Draw(border).rounded_rectangle([0, 0, CANVAS - 1, CANVAS - 1], radius=corner_radius, outline=(0, 0, 0, 40), width=2)
+result = Image.alpha_composite(result, border)
+result.save(sys.argv[2], 'PNG')
+PYEOF
+
+ICON_SRC="$ICON_MASTER"
 ICONSET_DIR="/tmp/PDFtrenner.iconset"
 rm -rf "$ICONSET_DIR"
 mkdir -p "$ICONSET_DIR"
@@ -79,6 +127,7 @@ sips -z 256 256 "$ICON_SRC" --out "$ICONSET_DIR/icon_128x128@2x.png" -s format p
 sips -z 256 256 "$ICON_SRC" --out "$ICONSET_DIR/icon_256x256.png" -s format png &>/dev/null
 sips -z 512 512 "$ICON_SRC" --out "$ICONSET_DIR/icon_256x256@2x.png" -s format png &>/dev/null
 sips -z 512 512 "$ICON_SRC" --out "$ICONSET_DIR/icon_512x512.png" -s format png &>/dev/null
+sips -z 1024 1024 "$ICON_SRC" --out "$ICONSET_DIR/icon_512x512@2x.png" -s format png &>/dev/null
 iconutil -c icns "$ICONSET_DIR" -o "$APPDIR/Contents/Resources/AppIcon.icns"
 
 # Build DMG
