@@ -65,6 +65,16 @@ def iconMac = file('src/main/resources/icon.icns')
 def iconWin = file('src/main/resources/icon.ico')
 def iconLinux = file('src/main/resources/icon.png')
 
+def distributionsDir = layout.buildDirectory.dir('distributions').get().asFile
+
+def deleteIfExists(path) {
+    def f = file(path)
+    if (f.exists()) {
+        logger.lifecycle("Lösche vorhandenes: ${f}")
+        delete f
+    }
+}
+
 // macOS
 // -----------------------------------------
 task jpackageMac(type: Exec) {
@@ -81,7 +91,8 @@ task jpackageMac(type: Exec) {
     }
     args argsList
     doFirst {
-        mkdir("${layout.buildDirectory.get().asFile}/distributions")
+        mkdir(distributionsDir)
+        deleteIfExists("${distributionsDir}/PDFTrenner.app")
         logger.lifecycle("Baue macOS App-Image...")
     }
 }
@@ -99,6 +110,9 @@ task jpackageMacDmg(type: Exec) {
         argsList += ['--icon', iconMac.absolutePath]
     }
     args argsList
+    doFirst {
+        deleteIfExists("${distributionsDir}/PDFTrenner-${appVersion}.dmg")
+    }
 }
 
 // Windows
@@ -117,6 +131,7 @@ task jpackageWin(type: Exec) {
     }
     args argsList
     doFirst {
+        deleteIfExists("${distributionsDir}/PDFTrenner")
         logger.lifecycle("Baue Windows App-Image (auf Windows ausfuehren!)...")
     }
 }
@@ -137,6 +152,9 @@ task jpackageWinMsi(type: Exec) {
         argsList += ['--icon', iconWin.absolutePath]
     }
     args argsList
+    doFirst {
+        deleteIfExists("${distributionsDir}/PDFTrenner-${appVersion}.msi")
+    }
 }
 
 // Linux
@@ -154,6 +172,7 @@ task jpackageLinux(type: Exec) {
     }
     args argsList
     doFirst {
+        deleteIfExists("${distributionsDir}/PDFTrenner")
         logger.lifecycle("Baue Linux App-Image (auf Linux ausfuehren!)...")
     }
 }
@@ -172,6 +191,9 @@ task jpackageLinuxDeb(type: Exec) {
         argsList += ['--icon', iconLinux.absolutePath]
     }
     args argsList
+    doFirst {
+        deleteIfExists("${distributionsDir}/pdftrenner_${appVersion}_amd64.deb")
+    }
 }
 
 // Plattform-spezifischer Wrapper (erkennt OS automatisch)
