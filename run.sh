@@ -37,10 +37,19 @@ if [ "$(uname)" = "Darwin" ] && [ -f "src/main/resources/icon.png" ]; then
   DOCK_ICON_ARG="-Xdock:icon=src/main/resources/icon.png"
 fi
 
+# Splash-Screen (zeigt Icon sofort vor JVM-Init)
+SPLASH_ARG=""
+if [ -f "src/main/resources/splash.png" ]; then
+  SPLASH_ARG="-splash:src/main/resources/splash.png"
+elif [ -f "$APP_HOME/splash.png" ]; then
+  SPLASH_ARG="-splash:$APP_HOME/splash.png"
+fi
+
 java \
   $DOCK_ICON_ARG \
+  $SPLASH_ARG \
   --module-path "$MODULE_PATH" \
-  --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.swing \
+  --add-modules javafx.controls,javafx.graphics,javafx.swing \
   --enable-native-access=javafx.graphics,javafx.swing \
   -Dprism.verbose=false \
   $DEBUG_ARG \

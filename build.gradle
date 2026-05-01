@@ -15,7 +15,7 @@ dependencies {
 
 javafx {
     version = "21"
-    modules = [ 'javafx.controls', 'javafx.fxml', 'javafx.graphics', 'javafx.swing' ]
+    modules = [ 'javafx.controls', 'javafx.graphics', 'javafx.swing' ]
 }
 
 application {
@@ -42,6 +42,9 @@ task prepareJpackageInput(type: Copy) {
     dependsOn 'jar'
     from jar.outputs.files
     from configurations.runtimeClasspath
+    from('src/main/resources/splash.png') {
+        into ''
+    }
     into jpackageInput
 }
 
@@ -61,10 +64,11 @@ def commonJpackageArgs = [
     '--main-class', 'de.posy.pdftrenner.Launcher',
     '--dest', layout.buildDirectory.dir('distributions').get().asFile.absolutePath,
     '--module-path', javafxModulePath,
-    '--add-modules', 'javafx.controls,javafx.fxml,javafx.graphics,javafx.swing',
+    '--add-modules', 'javafx.controls,javafx.graphics,javafx.swing',
     '--java-options', '--enable-native-access=javafx.graphics,javafx.swing',
     '--java-options', '-Dglass.accessible.force=false',
-    '--java-options', '-Dprism.verbose=false'
+    '--java-options', '-Dprism.verbose=false',
+    '--java-options', '-splash:$APPDIR/splash.png'
 ] + debugArg
 
 def iconMac = file('src/main/resources/icon.icns')
