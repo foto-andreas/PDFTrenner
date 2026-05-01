@@ -23,6 +23,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
 import javax.imageio.ImageIO;
+import java.awt.SplashScreen;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
@@ -66,6 +67,18 @@ public class PdfSplitterApp extends Application {
         }
     }
 
+    private void dismissNativeSplash() {
+        try {
+            SplashScreen splash = SplashScreen.getSplashScreen();
+            if (splash != null) {
+                splash.close();
+                debug("Native splash screen closed");
+            }
+        } catch (Exception e) {
+            debug("No native splash to close: " + e.getMessage());
+        }
+    }
+
     @Override
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -82,6 +95,7 @@ public class PdfSplitterApp extends Application {
         showSplashContent();
         primaryStage.show();
         bringToFront(primaryStage);
+        dismissNativeSplash();
 
         Parameters params = getParameters();
         if (!params.getRaw().isEmpty()) {
