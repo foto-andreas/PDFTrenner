@@ -44,6 +44,7 @@ public class PdfSplitterApp extends Application {
     private ImageView imageView;
     private Label statusLabel;
     private Stage primaryStage;
+    private Process ocrProcess;
 
     private static void debug(String msg) {
         if (DEBUG) {
@@ -52,36 +53,10 @@ public class PdfSplitterApp extends Application {
     }
 
     @Override
-    public void init() {
-        debug("init() aufgerufen");
-        // AWT vor JavaFX initialisieren (benoetigt fuer Taskbar/Dock-Icon)
-        try {
-            java.awt.Toolkit.getDefaultToolkit();
-            debug("AWT initialisiert");
-        } catch (Exception e) {
-            debug("AWT init fehlgeschlagen: " + e.getMessage());
-        }
-    }
-
-    @Override
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
         debug("start() aufgerufen");
 
-        // Dock-Icon setzen (Taskbar API = zuverlaessig auf macOS/Windows)
-        try {
-            if (java.awt.Taskbar.isTaskbarSupported()) {
-                java.awt.Image dockIcon = javax.imageio.ImageIO.read(
-                    getClass().getResourceAsStream("/icon.png")
-                );
-                java.awt.Taskbar.getTaskbar().setIconImage(dockIcon);
-                debug("Taskbar/Dock-Icon gesetzt");
-            }
-        } catch (Exception e) {
-            debug("Taskbar-Icon fehlgeschlagen: " + e.getMessage());
-        }
-
-        // Fenster-Icon fuer Titelleiste
         try {
             Image icon = new Image(getClass().getResourceAsStream("/icon.png"));
             primaryStage.getIcons().add(icon);
@@ -106,17 +81,16 @@ public class PdfSplitterApp extends Application {
     private void openFileChooserAndInit() {
         debug("openFileChooserAndInit() start");
 
-        // Stage mit sichtbarem Content anzeigen (NICHT alwaysOnTop!)
         primaryStage.setTitle("PDFTrenner");
         StackPane placeholder = new StackPane(
-            new Label("Bitte warten... PDF-Datei wird angefordert.")
+                new Label("Bitte warten... PDF-Datei wird angefordert.")
         );
         placeholder.setStyle("-fx-background-color: #f0f0f0; -fx-padding: 20;");
         primaryStage.setScene(new Scene(placeholder, 400, 100));
         primaryStage.show();
         primaryStage.toFront();
         primaryStage.requestFocus();
-        debug("Stage angezeigt (ohne alwaysOnTop)");
+        debug("Stage angezeigt");
 
         PauseTransition delay = new PauseTransition(Duration.millis(400));
         delay.setOnFinished(e -> {
@@ -125,8 +99,9 @@ public class PdfSplitterApp extends Application {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("PDF-Datei auswaehlen");
             fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("PDF-Dateien", "*.pdf", "*.PDF")
+                    new FileChooser.ExtensionFilter("PDF-Dateien", "*.pdf", "*.PDF")
             );
+            fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
 
             debug("FileChooser.showOpenDialog() vor Aufruf");
             File selectedFile = null;
@@ -136,7 +111,7 @@ public class PdfSplitterApp extends Application {
                 debug("Exception im FileChooser: " + ex);
                 ex.printStackTrace();
                 Alert alert = new Alert(Alert.AlertType.ERROR,
-                    "Dateiauswahl-Dialog konnte nicht geöffnet werden:\n" + ex.getMessage());
+                        "Dateiauswahl-Dialog konnte nicht geöffnet werden:\n" + ex.getMessage());
                 alert.showAndWait();
             }
             debug("FileChooser Ergebnis: " + selectedFile);
@@ -147,17 +122,8 @@ public class PdfSplitterApp extends Application {
                 initPdfAndShow();
             } else {
                 debug("Abbruch, beende Anwendung");
-                delay.stop();
                 primaryStage.close();
                 Platform.exit();
-                // Notfall-Exit falls Platform.exit() nicht ausreicht
-                new Thread(() -> {
-                    try {
-                        Thread.sleep(1000);
-                        debug("Notfall-System.exit(0)");
-                    } catch (InterruptedException ignored) {}
-                    System.exit(0);
-                }).start();
             }
         });
         delay.play();
@@ -193,9 +159,9 @@ public class PdfSplitterApp extends Application {
         StackPane centerPane = new StackPane(imageView);
         centerPane.setStyle("-fx-background-color: #2b2b2b;");
         centerPane.widthProperty().addListener((obs, oldVal, newVal) ->
-            imageView.setFitWidth(newVal.doubleValue() - 20));
+                imageView.setFitWidth(newVal.doubleValue() - 20));
         centerPane.heightProperty().addListener((obs, oldVal, newVal) ->
-            imageView.setFitHeight(newVal.doubleValue() - 20));
+                imageView.setFitHeight(newVal.doubleValue() - 20));
         root.setCenter(centerPane);
 
         statusLabel = new Label();
@@ -238,7 +204,6 @@ public class PdfSplitterApp extends Application {
         primaryStage.setTitle("Java PDF Splitter - " + new File(pdfPath).getName());
         primaryStage.setScene(scene);
 
-        // Robuste Vordergrund-Aktivierung auf macOS
         PauseTransition pt = new PauseTransition(Duration.millis(200));
         pt.setOnFinished(e -> {
             primaryStage.toFront();
@@ -268,6 +233,7 @@ public class PdfSplitterApp extends Application {
             );
             pb.redirectErrorStream(true);
             Process process = pb.start();
+            ocrProcess = process;
 
             boolean finished = process.waitFor(15, TimeUnit.SECONDS);
             if (!finished) {
@@ -290,10 +256,12 @@ public class PdfSplitterApp extends Application {
             System.err.println("OCR-Fehler: " + e.getMessage());
             return "";
         } finally {
+            ocrProcess = null;
             if (tempImage != null) {
                 try {
                     Files.deleteIfExists(tempImage);
-                } catch (IOException ignored) {}
+                } catch (IOException ignored) {
+                }
             }
         }
     }
@@ -408,6 +376,9 @@ public class PdfSplitterApp extends Application {
 
     @Override
     public void stop() throws Exception {
+        if (ocrProcess != null) {
+            ocrProcess.destroyForcibly();
+        }
         saveState();
         if (document != null) {
             document.close();
@@ -445,7 +416,4 @@ public class PdfSplitterApp extends Application {
         }
     }
 
-    public static void main(String[] args) {
-        launch(args);
-    }
 }

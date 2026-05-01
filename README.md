@@ -72,9 +72,10 @@ Zielplattform erfolgen.
 ```
 
 Ergebnis: `build/distributions/PDFTrenner.app`  
-Start: Doppelklick auf `PDFTrenner.app` oder
+Start: Doppelklick auf `PDFTrenner.app` bedient den FileChooser-Dialog.
+Per Terminal:
 ```bash
-open build/distributions/PDFTrenner.app --args DATEI.pdf
+open build/distributions/PDFTrenner.app
 ```
 
 ### Windows
@@ -142,5 +143,3 @@ run.sh                      — Entwicklungs-Startskript (macOS/Linux)
   angelegt und enthalten die zuletzt bearbeitete Startseite
 - **Ausgabe:** `Manual_Splits/` — Unterordner neben der Quell-PDF fuer
   extrahierte Seitenbereiche
-- **Fenster im Vordergrund:** Auf macOS wird das Fenster nach dem Start aktiv
-  in den Vordergrund geholt

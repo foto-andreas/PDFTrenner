@@ -21,7 +21,6 @@ javafx {
 application {
     mainClass = 'de.posy.pdftrenner.Launcher'
     applicationDefaultJvmArgs = [
-        '-Dglass.accessible.force=false',
         '--enable-native-access=javafx.graphics,javafx.swing'
     ]
 }
@@ -57,10 +56,8 @@ def commonJpackageArgs = [
     '--main-jar', jar.archiveFileName.get(),
     '--main-class', 'de.posy.pdftrenner.Launcher',
     '--dest', layout.buildDirectory.dir('distributions').get().asFile.absolutePath,
-    '--java-options', '--module-path $APP_DIR/lib',
     '--java-options', '--add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.swing',
     '--java-options', '--enable-native-access=javafx.graphics,javafx.swing',
-    '--java-options', '-Djava.awt.headless=false',
     '--java-options', '-Dglass.accessible.force=false',
     '--java-options', '-Dprism.verbose=false'
 ] + debugArg
