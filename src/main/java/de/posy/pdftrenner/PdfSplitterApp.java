@@ -268,10 +268,14 @@ public class PdfSplitterApp extends Application {
     }
 
     private String recognizeTitle(int pageIndex) {
-        if (renderer == null) return "";
+        if (renderer == null || document == null) return "";
         Path tempImage = null;
+        Process process = null;
         try {
-            BufferedImage full = renderer.renderImageWithDPI(pageIndex, 300);
+            BufferedImage full;
+            synchronized (this) {
+                full = renderer.renderImageWithDPI(pageIndex, 300);
+            }
             int cropHeight = (int) (full.getHeight() * 0.10);
             if (cropHeight < 10) cropHeight = full.getHeight();
             BufferedImage cropped = full.getSubimage(0, 0, full.getWidth(), cropHeight);
@@ -285,7 +289,7 @@ public class PdfSplitterApp extends Application {
                     "--psm", "6"
             );
             pb.redirectErrorStream(true);
-            Process process = pb.start();
+            process = pb.start();
             ocrProcess = process;
 
             boolean finished = process.waitFor(15, TimeUnit.SECONDS);
@@ -367,22 +371,34 @@ public class PdfSplitterApp extends Application {
             return;
         }
 
-        String detectedTitle = recognizeTitle(startPage);
-        if (!detectedTitle.isEmpty()) {
-            System.out.println("Erkannter Titel: " + detectedTitle);
-        }
+        statusLabel.setText("Erkenne Titel (OCR)...");
+        Thread ocrThread = new Thread(() -> {
+            String detectedTitle = recognizeTitle(startPage);
+            if (!detectedTitle.isEmpty()) {
+                System.out.println("Erkannter Titel: " + detectedTitle);
+            }
+            Platform.runLater(() -> {
+                statusLabel.setText(null);
+                showTitleDialog(detectedTitle, startPage, endPage);
+            });
+        }, "OCR-Thread");
+        ocrThread.setDaemon(true);
+        ocrThread.start();
+    }
 
+    private void showTitleDialog(String detectedTitle, int start, int end) {
         TextInputDialog dialog = new TextInputDialog(detectedTitle);
         dialog.initOwner(primaryStage);
         dialog.initModality(Modality.WINDOW_MODAL);
         dialog.setTitle("Extraktion");
-        dialog.setHeaderText(String.format("Dateiname f\u00fcr Seiten %d bis %d:", startPage + 1, endPage + 1));
+        dialog.setHeaderText(String.format("Dateiname f\u00fcr Seiten %d bis %d:", start + 1, end + 1));
         dialog.setContentText("Songtitel:");
 
+        bringToFront(primaryStage);
         Optional<String> result = dialog.showAndWait();
         primaryStage.requestFocus();
         result.ifPresent(songTitle -> {
-            saveSplit(songTitle, startPage, endPage);
+            saveSplit(songTitle, start, end);
         });
     }
 
