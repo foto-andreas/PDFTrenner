@@ -29,6 +29,7 @@ java \
   --module-path "$MODULE_PATH" \
   --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.swing \
   --enable-native-access=javafx.graphics,javafx.swing \
+  -Djava.awt.headless=false \
   -Djavafx.verbose=false \
   -Dprism.verbose=false \
   $DEBUG_ARG \

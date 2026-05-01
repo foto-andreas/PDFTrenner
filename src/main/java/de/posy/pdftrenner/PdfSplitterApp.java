@@ -3,21 +3,21 @@ package de.posy.pdftrenner;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
-import javafx.animation.PauseTransition;
-import javafx.geometry.Pos;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.image.Image;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import javafx.animation.PauseTransition;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
@@ -52,17 +52,42 @@ public class PdfSplitterApp extends Application {
     }
 
     @Override
+    public void init() {
+        debug("init() aufgerufen");
+        // AWT vor JavaFX initialisieren (benoetigt fuer Taskbar/Dock-Icon)
+        try {
+            java.awt.Toolkit.getDefaultToolkit();
+            debug("AWT initialisiert");
+        } catch (Exception e) {
+            debug("AWT init fehlgeschlagen: " + e.getMessage());
+        }
+    }
+
+    @Override
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
         debug("start() aufgerufen");
 
-        // Dock-Icon setzen
+        // Dock-Icon setzen (Taskbar API = zuverlaessig auf macOS/Windows)
+        try {
+            if (java.awt.Taskbar.isTaskbarSupported()) {
+                java.awt.Image dockIcon = javax.imageio.ImageIO.read(
+                    getClass().getResourceAsStream("/icon.png")
+                );
+                java.awt.Taskbar.getTaskbar().setIconImage(dockIcon);
+                debug("Taskbar/Dock-Icon gesetzt");
+            }
+        } catch (Exception e) {
+            debug("Taskbar-Icon fehlgeschlagen: " + e.getMessage());
+        }
+
+        // Fenster-Icon fuer Titelleiste
         try {
             Image icon = new Image(getClass().getResourceAsStream("/icon.png"));
             primaryStage.getIcons().add(icon);
-            debug("Dock-Icon gesetzt");
+            debug("Stage-Icon gesetzt");
         } catch (Exception e) {
-            System.err.println("Icon konnte nicht geladen werden: " + e.getMessage());
+            System.err.println("Stage-Icon konnte nicht geladen werden: " + e.getMessage());
         }
 
         Parameters params = getParameters();
@@ -81,18 +106,21 @@ public class PdfSplitterApp extends Application {
     private void openFileChooserAndInit() {
         debug("openFileChooserAndInit() start");
 
-        // Stage mit sichtbarer Groesse anzeigen
+        // Stage mit sichtbarem Content anzeigen (NICHT alwaysOnTop!)
         primaryStage.setTitle("PDFTrenner");
-        primaryStage.setScene(new Scene(new StackPane(), 400, 100));
-        primaryStage.setAlwaysOnTop(true);
+        StackPane placeholder = new StackPane(
+            new Label("Bitte warten... PDF-Datei wird angefordert.")
+        );
+        placeholder.setStyle("-fx-background-color: #f0f0f0; -fx-padding: 20;");
+        primaryStage.setScene(new Scene(placeholder, 400, 100));
         primaryStage.show();
         primaryStage.toFront();
-        debug("Stage angezeigt");
+        primaryStage.requestFocus();
+        debug("Stage angezeigt (ohne alwaysOnTop)");
 
-        PauseTransition delay = new PauseTransition(Duration.millis(500));
+        PauseTransition delay = new PauseTransition(Duration.millis(400));
         delay.setOnFinished(e -> {
             debug("Pause abgelaufen, oeffne FileChooser");
-            primaryStage.setAlwaysOnTop(false);
 
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("PDF-Datei auswaehlen");
@@ -107,6 +135,9 @@ public class PdfSplitterApp extends Application {
             } catch (Exception ex) {
                 debug("Exception im FileChooser: " + ex);
                 ex.printStackTrace();
+                Alert alert = new Alert(Alert.AlertType.ERROR,
+                    "Dateiauswahl-Dialog konnte nicht geöffnet werden:\n" + ex.getMessage());
+                alert.showAndWait();
             }
             debug("FileChooser Ergebnis: " + selectedFile);
 
@@ -164,11 +195,11 @@ public class PdfSplitterApp extends Application {
         statusLabel.setAlignment(Pos.CENTER);
 
         Button firstPageBtn = new Button("First Page");
-        firstPageBtn.setTooltip(new Tooltip("Setzt die aktuelle Seite als Startseite für die Extraktion (Taste: F)"));
+        firstPageBtn.setTooltip(new Tooltip("Setzt die aktuelle Seite als Startseite fuer die Extraktion (Taste: F)"));
         firstPageBtn.setOnAction(e -> setFirst());
 
         Button lastPageBtn = new Button("Last Page");
-        lastPageBtn.setTooltip(new Tooltip("Setzt die aktuelle Seite als Endseite und öffnet den Speicherdialog (Taste: L)"));
+        lastPageBtn.setTooltip(new Tooltip("Setzt die aktuelle Seite als Endseite und oeffnet den Speicherdialog (Taste: L)"));
         lastPageBtn.setOnAction(e -> setLast());
 
         HBox buttonBox = new HBox(10, firstPageBtn, lastPageBtn);
@@ -201,12 +232,8 @@ public class PdfSplitterApp extends Application {
         // Robuste Vordergrund-Aktivierung auf macOS
         PauseTransition pt = new PauseTransition(Duration.millis(200));
         pt.setOnFinished(e -> {
-            primaryStage.setAlwaysOnTop(true);
             primaryStage.toFront();
             primaryStage.requestFocus();
-            PauseTransition pt2 = new PauseTransition(Duration.millis(100));
-            pt2.setOnFinished(ev -> primaryStage.setAlwaysOnTop(false));
-            pt2.play();
         });
         pt.play();
 
@@ -319,7 +346,7 @@ public class PdfSplitterApp extends Application {
         dialog.initOwner(primaryStage);
         dialog.initModality(Modality.WINDOW_MODAL);
         dialog.setTitle("Extraktion");
-        dialog.setHeaderText(String.format("Dateiname für Seiten %d bis %d:", startPage + 1, endPage + 1));
+        dialog.setHeaderText(String.format("Dateiname fuer Seiten %d bis %d:", startPage + 1, endPage + 1));
         dialog.setContentText("Songtitel:");
 
         Optional<String> result = dialog.showAndWait();
