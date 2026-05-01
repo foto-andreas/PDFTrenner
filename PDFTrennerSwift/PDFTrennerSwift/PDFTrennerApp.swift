@@ -10,8 +10,6 @@ struct PDFTrennerApp: App {
             ContentView()
                 .frame(minWidth: 600, minHeight: 700)
         }
-        .windowStyle(.titleBar)
-        .defaultSize(width: 900, height: 1000)
         .commands {
             CommandGroup(replacing: .newItem) { }
         }

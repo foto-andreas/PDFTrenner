@@ -19,10 +19,12 @@ struct ContentView: View {
         .sheet(isPresented: $vm.showSaveDialog) {
             saveDialog
         }
-        .alert("Fehler", isPresented: $vm.showError, presenting: vm.errorDetail) { _ in
-            Button("OK") { vm.showError = false }
-        } message: { detail in
-            Text(detail.message)
+        .alert(isPresented: $vm.showError) {
+            Alert(
+                title: Text("Fehler"),
+                message: Text(vm.errorDetail.message),
+                dismissButton: .default(Text("OK"))
+            )
         }
     }
 
@@ -93,16 +95,21 @@ struct ContentView: View {
             Text("Extraktion")
                 .font(.headline)
             Text("Dateiname für Seiten \(vm.startPage + 1) bis \(vm.endPage + 1):")
-            TextField("Songtitel", text: $vm.detectedTitle)
+            TextField("Songtitel", text: $vm.detectedTitle, onCommit: {
+                vm.showSaveDialog = false
+                vm.saveSplit()
+            })
                 .textFieldStyle(.roundedBorder)
                 .frame(minWidth: 300)
             HStack {
                 Button("Abbrechen") { vm.showSaveDialog = false }
+                    .keyboardShortcut(.cancelAction)
                 Button("Speichern") {
                     vm.showSaveDialog = false
                     vm.saveSplit()
                 }
-                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.return)
             }
         }
         .padding(20)
