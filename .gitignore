@@ -54,3 +54,4 @@ Manual_Splits/
 # Swift Package Manager
 .build/
 *.dmg
+PDFTrennerSwift/PDFTrenner.app/
