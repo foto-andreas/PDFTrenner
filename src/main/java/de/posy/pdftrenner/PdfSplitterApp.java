@@ -80,11 +80,13 @@ public class PdfSplitterApp extends Application {
     }
 
     private void showError(String message) {
-        Platform.runLater(() -> {
-            Alert alert = new Alert(Alert.AlertType.ERROR, message);
-            alert.initOwner(primaryStage);
-            alert.showAndWait();
-        });
+        if (splashLabel != null) {
+            splashLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: red;");
+            splashLabel.setText(message);
+        }
+        Alert alert = new Alert(Alert.AlertType.ERROR, message);
+        alert.initOwner(primaryStage);
+        alert.showAndWait();
     }
 
     @Override
@@ -108,8 +110,8 @@ public class PdfSplitterApp extends Application {
         Parameters params = getParameters();
         if (!params.getRaw().isEmpty()) {
             File f = new File(params.getRaw().get(0));
-            pdfPath = f.isAbsolute() ? f.getAbsolutePath() : new File(f.getPath()).getAbsolutePath();
-            updateSplash("Lade: " + new File(pdfPath).getName());
+            pdfPath = f.getAbsolutePath();
+            updateSplash("Lade: " + f.getName());
             Platform.runLater(this::initPdfAndShow);
         } else {
             updateSplash("Oeffne Dateiauswahl...");
@@ -179,8 +181,15 @@ public class PdfSplitterApp extends Application {
     }
 
     private void initPdfAndShow() {
+        File pdfFile = new File(pdfPath);
+        if (!pdfFile.exists()) {
+            showError("Datei nicht gefunden:\n" + pdfPath);
+            primaryStage.close();
+            Platform.exit();
+            return;
+        }
         try {
-            document = PDDocument.load(new File(pdfPath));
+            document = PDDocument.load(pdfFile);
             numPages = document.getNumberOfPages();
             updateSplash("Bereite Renderer vor (" + numPages + " Seiten)...");
             renderer = new PDFRenderer(document);
