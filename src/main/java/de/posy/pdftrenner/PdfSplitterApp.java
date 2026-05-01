@@ -276,12 +276,17 @@ public class PdfSplitterApp extends Application {
             synchronized (this) {
                 full = renderer.renderImageWithDPI(pageIndex, 300);
             }
+            if (full == null) {
+                System.err.println("OCR: renderImageWithDPI returned null");
+                return "";
+            }
             int cropHeight = (int) (full.getHeight() * 0.10);
             if (cropHeight < 10) cropHeight = full.getHeight();
             BufferedImage cropped = full.getSubimage(0, 0, full.getWidth(), cropHeight);
 
             tempImage = Files.createTempFile("pdftrenner_ocr_", ".png");
             ImageIO.write(cropped, "png", tempImage.toFile());
+            debug("OCR: temp image written to " + tempImage);
 
             ProcessBuilder pb = new ProcessBuilder(
                     "tesseract", tempImage.toString(), "stdout",
@@ -292,6 +297,14 @@ public class PdfSplitterApp extends Application {
             process = pb.start();
             ocrProcess = process;
 
+            StringBuilder output = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append(" ");
+                }
+            }
+
             boolean finished = process.waitFor(15, TimeUnit.SECONDS);
             if (!finished) {
                 process.destroyForcibly();
@@ -299,18 +312,13 @@ public class PdfSplitterApp extends Application {
                 return "";
             }
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                StringBuilder output = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append(" ");
-                }
-                String text = output.toString().replaceAll("\\s+", " ").trim();
-                System.out.println("OCR-Ergebnis: [" + text + "]");
-                return text;
-            }
+            int exitCode = process.exitValue();
+            String text = output.toString().replaceAll("\\s+", " ").trim();
+            debug("OCR: exit=" + exitCode + " result=[" + text + "]");
+            return text;
         } catch (IOException | InterruptedException e) {
             System.err.println("OCR-Fehler: " + e.getMessage());
+            e.printStackTrace();
             return "";
         } finally {
             ocrProcess = null;
@@ -387,7 +395,9 @@ public class PdfSplitterApp extends Application {
     }
 
     private void showTitleDialog(String detectedTitle, int start, int end) {
-        TextInputDialog dialog = new TextInputDialog(detectedTitle);
+        debug("showTitleDialog: detectedTitle=[" + detectedTitle + "]");
+        String defaultValue = (detectedTitle != null && !detectedTitle.isEmpty()) ? detectedTitle : "";
+        TextInputDialog dialog = new TextInputDialog(defaultValue);
         dialog.initOwner(primaryStage);
         dialog.initModality(Modality.WINDOW_MODAL);
         dialog.setTitle("Extraktion");
