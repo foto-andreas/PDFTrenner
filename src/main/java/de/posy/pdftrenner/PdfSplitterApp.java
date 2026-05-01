@@ -8,8 +8,11 @@ import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.animation.PauseTransition;
+import javafx.geometry.Pos;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -91,7 +94,23 @@ public class PdfSplitterApp extends Application {
 
         statusLabel = new Label();
         statusLabel.setStyle("-fx-padding: 8; -fx-background-color: #f0f0f0;");
-        root.setBottom(statusLabel);
+        statusLabel.setMaxWidth(Double.MAX_VALUE);
+        statusLabel.setAlignment(Pos.CENTER);
+
+        Button firstPageBtn = new Button("First Page");
+        firstPageBtn.setTooltip(new Tooltip("Setzt die aktuelle Seite als Startseite für die Extraktion (Taste: F)"));
+        firstPageBtn.setOnAction(e -> setFirst());
+
+        Button lastPageBtn = new Button("Last Page");
+        lastPageBtn.setTooltip(new Tooltip("Setzt die aktuelle Seite als Endseite und öffnet den Speicherdialog (Taste: L)"));
+        lastPageBtn.setOnAction(e -> setLast());
+
+        HBox buttonBox = new HBox(10, firstPageBtn, lastPageBtn);
+        buttonBox.setAlignment(Pos.CENTER);
+        buttonBox.setStyle("-fx-padding: 8; -fx-background-color: #f0f0f0;");
+
+        VBox bottomBox = new VBox(statusLabel, buttonBox);
+        root.setBottom(bottomBox);
 
         Scene scene = new Scene(root, 900, 1000);
         scene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
