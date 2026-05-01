@@ -18,7 +18,6 @@ import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import javafx.animation.PauseTransition;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
@@ -35,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 public class PdfSplitterApp extends Application {
 
     private static final boolean DEBUG = Boolean.getBoolean("pdftrenner.debug");
-    private static final boolean IS_MAC = System.getProperty("os.name", "").toLowerCase().contains("mac");
 
     private PDDocument document;
     private PDFRenderer renderer;
@@ -59,12 +57,6 @@ public class PdfSplitterApp extends Application {
     private void bringToFront(Stage stage) {
         stage.toFront();
         stage.requestFocus();
-        if (IS_MAC) {
-            stage.setAlwaysOnTop(true);
-            PauseTransition revert = new PauseTransition(Duration.millis(150));
-            revert.setOnFinished(e -> stage.setAlwaysOnTop(false));
-            revert.play();
-        }
     }
 
     private void dismissNativeSplash() {
@@ -111,11 +103,9 @@ public class PdfSplitterApp extends Application {
         if (!params.getRaw().isEmpty()) {
             File f = new File(params.getRaw().get(0));
             pdfPath = f.getAbsolutePath();
-            updateSplash("Lade: " + f.getName());
-            Platform.runLater(this::initPdfAndShow);
+            initPdfAndShow();
         } else {
-            updateSplash("Oeffne Dateiauswahl...");
-            Platform.runLater(this::openFileChooserAndInit);
+            openFileChooserAndInit();
         }
     }
 
@@ -146,11 +136,12 @@ public class PdfSplitterApp extends Application {
     private void updateSplash(String msg) {
         debug(msg);
         if (splashLabel != null) {
-            Platform.runLater(() -> splashLabel.setText(msg));
+            splashLabel.setText(msg);
         }
     }
 
     private void openFileChooserAndInit() {
+        updateSplash("Oeffne Dateiauswahl...");
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("PDF-Datei auswaehlen");
         fileChooser.getExtensionFilters().add(
@@ -171,8 +162,7 @@ public class PdfSplitterApp extends Application {
 
         if (selectedFile != null) {
             pdfPath = selectedFile.getAbsolutePath();
-            updateSplash("Lade: " + new File(pdfPath).getName());
-            Platform.runLater(this::initPdfAndShow);
+            initPdfAndShow();
         } else {
             debug("Abbruch, beende Anwendung");
             primaryStage.close();
