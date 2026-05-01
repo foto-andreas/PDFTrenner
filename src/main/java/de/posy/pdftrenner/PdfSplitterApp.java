@@ -13,6 +13,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.image.Image;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -46,31 +47,43 @@ public class PdfSplitterApp extends Application {
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
 
-        // Stage zuerst mit leerer Scene anzeigen, damit FileChooser funktioniert
-        primaryStage.setTitle("PDFTrenner");
-        primaryStage.setScene(new Scene(new StackPane(), 1, 1));
-        primaryStage.show();
+        // Dock-Icon setzen
+        try {
+            Image icon = new Image(getClass().getResourceAsStream("/icon.png"));
+            primaryStage.getIcons().add(icon);
+        } catch (Exception e) {
+            System.err.println("Icon konnte nicht geladen werden: " + e.getMessage());
+        }
 
         Parameters params = getParameters();
         if (!params.getRaw().isEmpty()) {
             pdfPath = params.getRaw().get(0);
+            initPdfAndShow();
         } else {
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("PDF-Datei auswählen");
-            fileChooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("PDF-Dateien", "*.pdf", "*.PDF")
-            );
-            File selectedFile = fileChooser.showOpenDialog(primaryStage);
-            if (selectedFile != null) {
-                pdfPath = selectedFile.getAbsolutePath();
-            }
-        }
+            // Minimale Stage sichtbar machen fuer FileChooser
+            primaryStage.setTitle("PDFTrenner");
+            primaryStage.setScene(new Scene(new StackPane(), 1, 1));
+            primaryStage.show();
 
-        if (pdfPath == null) {
-            Platform.exit();
-            return;
+            Platform.runLater(() -> {
+                FileChooser fileChooser = new FileChooser();
+                fileChooser.setTitle("PDF-Datei auswaehlen");
+                fileChooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter("PDF-Dateien", "*.pdf", "*.PDF")
+                );
+                File selectedFile = fileChooser.showOpenDialog(primaryStage);
+                if (selectedFile != null) {
+                    pdfPath = selectedFile.getAbsolutePath();
+                    initPdfAndShow();
+                } else {
+                    primaryStage.close();
+                    Platform.exit();
+                }
+            });
         }
+    }
 
+    private void initPdfAndShow() {
         try {
             document = PDDocument.load(new File(pdfPath));
             numPages = document.getNumberOfPages();
