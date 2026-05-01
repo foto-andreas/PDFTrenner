@@ -13,6 +13,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -49,15 +50,18 @@ public class PdfSplitterApp extends Application {
         if (!params.getRaw().isEmpty()) {
             pdfPath = params.getRaw().get(0);
         } else {
-            File dir = new File(".");
-            File[] pdfs = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".pdf"));
-            if (pdfs != null && pdfs.length > 0) {
-                pdfPath = pdfs[0].getPath();
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("PDF-Datei auswählen");
+            fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("PDF-Dateien", "*.pdf", "*.PDF")
+            );
+            File selectedFile = fileChooser.showOpenDialog(primaryStage);
+            if (selectedFile != null) {
+                pdfPath = selectedFile.getAbsolutePath();
             }
         }
 
         if (pdfPath == null) {
-            System.err.println("Keine PDF-Datei angegeben.");
             Platform.exit();
             return;
         }
