@@ -46,6 +46,11 @@ public class PdfSplitterApp extends Application {
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
 
+        // Stage zuerst mit leerer Scene anzeigen, damit FileChooser funktioniert
+        primaryStage.setTitle("PDFTrenner");
+        primaryStage.setScene(new Scene(new StackPane(), 1, 1));
+        primaryStage.show();
+
         Parameters params = getParameters();
         if (!params.getRaw().isEmpty()) {
             pdfPath = params.getRaw().get(0);
@@ -83,6 +88,10 @@ public class PdfSplitterApp extends Application {
             System.out.println("Zustand wiederhergestellt: Seite " + (startPage + 1));
         }
 
+        buildAndShowUI();
+    }
+
+    private void buildAndShowUI() {
         BorderPane root = new BorderPane();
         imageView = new ImageView();
         imageView.setPreserveRatio(true);
@@ -135,7 +144,6 @@ public class PdfSplitterApp extends Application {
 
         primaryStage.setTitle("Java PDF Splitter - " + new File(pdfPath).getName());
         primaryStage.setScene(scene);
-        primaryStage.show();
 
         // Robuste Vordergrund-Aktivierung auf macOS
         PauseTransition pt = new PauseTransition(Duration.millis(200));
