@@ -1,0 +1,21 @@
+flowchart TD
+    A["PDF öffnen"] --> B["PDF laden\nund anzeigen"]
+    B --> C["Blättern\n◀ / ▶"]
+    C --> D{"Taste\noder Button"}
+    D -->|"◀ / ▶"| C
+    D -->|"F"| E["Startseite\nfestlegen"]
+    E --> F["Titeleingabe\n(OCR-Vorschlag\nwird eingefüllt)"]
+    F -->|"OK"| G["Zur Endseite\nblättern"]
+    F -->|"Abbrechen"| C
+    G -->|"L"| H["Endseite\nfestlegen"]
+    H --> I["Abschnitt\nspeichern"]
+    I --> J["PDF-Datei\nim Ordner\nManual_Splits"]
+    I --> K["Fortschritt\nmerken"]
+    I --> L{"Noch Seiten\nübrig?"}
+    L -->|"Ja"| E
+    L -->|"Nein"| M["Fertig"]
+
+    style A fill:#4a9eff,color:#fff
+    style F fill:#ff6b6b,color:#fff
+    style J fill:#2ed573,color:#fff
+    style M fill:#ffa502,color:#fff

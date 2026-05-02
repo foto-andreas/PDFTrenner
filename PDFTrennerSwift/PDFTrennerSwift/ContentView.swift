@@ -376,8 +376,16 @@ class PDFViewModel: ObservableObject {
     func saveSplit() {
         guard let doc = document, let path = pdfPath else { return }
         let title = currentTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        var safeTitle = title.replacingOccurrences(of: "[^a-zA-Z0-9 _-]", with: "", options: .regularExpression)
-        safeTitle = safeTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        var safeTitle = title
+            .replacingOccurrences(of: "ä", with: "ae")
+            .replacingOccurrences(of: "ö", with: "oe")
+            .replacingOccurrences(of: "ü", with: "ue")
+            .replacingOccurrences(of: "Ä", with: "Ae")
+            .replacingOccurrences(of: "Ö", with: "Oe")
+            .replacingOccurrences(of: "Ü", with: "Ue")
+            .replacingOccurrences(of: "ß", with: "ss")
+            .replacingOccurrences(of: "[^a-zA-Z0-9 _-]", with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         if safeTitle.isEmpty {
             safeTitle = "Song_Seite_\(startPage + 1)"
         }

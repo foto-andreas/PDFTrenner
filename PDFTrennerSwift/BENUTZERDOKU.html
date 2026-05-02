@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDFTrenner — Benutzerdokumentation</title>
+<style>
+body {
+    font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #222;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    background: #fff;
+}
+h1 {
+    font-size: 28px;
+    border-bottom: 2px solid #4a9eff;
+    padding-bottom: 8px;
+    margin-top: 0;
+    color: #1a1a1a;
+}
+h2 {
+    font-size: 20px;
+    color: #333;
+    margin-top: 28px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+}
+h3 {
+    font-size: 17px;
+    color: #444;
+    margin-top: 20px;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 14px;
+}
+th, td {
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+th {
+    background-color: #f0f4f8;
+    font-weight: bold;
+}
+tr:nth-child(even) {
+    background-color: #fafafa;
+}
+code {
+    background-color: #f4f4f4;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: "SF Mono", "Menlo", "Monaco", monospace;
+    font-size: 13px;
+}
+pre {
+    background-color: #f4f4f4;
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.5;
+}
+pre code {
+    background: none;
+    padding: 0;
+}
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 16px auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+strong, b {
+    color: #1a1a1a;
+}
+p {
+    margin: 6px 0;
+}
+ul, ol {
+    margin: 4px 0;
+    padding-left: 20px;
+}
+li {
+    margin: 3px 0;
+}
+@media print {
+    body { max-width: 100%; padding: 0; }
+    h2 { page-break-after: avoid; }
+    h3 { page-break-after: avoid; }
+}
+</style>
+</head>
+<body>
+<h1>PDFTrenner Swift — Benutzerdokumentation</h1>
+<h2>Übersicht</h2>
+<p>PDFTrenner ist eine Anwendung zum interaktiven Durchblättern und Aufteilen von PDF-Dateien. Die Swift-Variante läuft nativ auf macOS (ab Monterey 12.0) als Universal Binary (ARM + Intel).</p>
+<h2>Installation</h2>
+<h3>Variante A: DMG (empfohlen)</h3>
+<ol>
+<li><code>PDFTrennerSwift-1.0-universal.dmg</code> öffnen</li>
+<li><code>PDFTrenner.app</code> in den Ordner <code>Programme</code> ziehen</li>
+<li>Beim ersten Start: Rechtsklick → <code>Öffnen</code> (macOS-Gatekeeper-Bestätigung)</li>
+</ol>
+<h3>Variante B: Aus dem Quellcode</h3>
+<pre class="codehilite"><code class="language-bash">cd PDFTrennerSwift
+swift build -c release          # aktuelle Architektur
+# oder:
+./build_dmg.sh                  # Universal Binary + DMG erstellen
+</code></pre>
+
+<p>Voraussetzung: macOS 12+, Xcode Command Line Tools.</p>
+<h2>Start</h2>
+<p>Beim Start erscheint ein Dateiauswahl-Dialog. Gewünschte PDF-Datei auswählen.</p>
+<p>Wenn die Anwendung mit einem Dateipfad als Argument gestartet wird, wird diese Datei direkt geladen:</p>
+<pre class="codehilite"><code class="language-bash">open PDFTrenner.app --args /Pfad/zur/Datei.pdf
+</code></pre>
+
+<h2>Benutzeroberfläche</h2>
+<h3>Hauptfenster</h3>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Beschreibung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PDF-Ansicht</strong></td>
+<td>Zeigt die aktuelle Seite des Dokuments an</td>
+</tr>
+<tr>
+<td><strong>Statusleiste</strong></td>
+<td>Zeigt: Seitennummer, Startseite, aktueller Titel</td>
+</tr>
+<tr>
+<td><strong>◀ / ▶</strong></td>
+<td>Vorherige/nächste Seite</td>
+</tr>
+<tr>
+<td><strong>Start (F)</strong></td>
+<td>Startseite festlegen und Titeleingabe öffnen</td>
+</tr>
+<tr>
+<td><strong>Ende (L)</strong></td>
+<td>Endseite festlegen und Speichern auslösen</td>
+</tr>
+</tbody>
+</table>
+<h3>Titeleingabe</h3>
+<p>Wird automatisch geöffnet, wenn die Startseite gesetzt wird (Taste <code>F</code>). Das Eingabefeld erscheint als schwebendes Panel rechts neben dem Hauptfenster.</p>
+<ul>
+<li>Der erkannte Titel wird automatisch vorausgefüllt</li>
+<li>Beliebigen Titel eintippen oder den Vorschlag übernehmen</li>
+<li><strong>OK</strong> oder <strong>Enter</strong> → Titel übernehmen und fortfahren</li>
+<li><strong>Abbrechen</strong> oder <strong>Esc</strong> → Titel leeren</li>
+</ul>
+<h3>Workflow</h3>
+<p><img alt="Workflow-Diagramm" src="workflow.svg" /></p>
+<p><strong>F</strong> = Startseite setzen → Titeleingabe<br />
+<strong>L</strong> = Endseite setzen → sofort speichern</p>
+<p>Nach dem Speichern wird automatisch die nächste Seite als neue Startseite vorgeschlagen und die Titeleingabe geöffnet. So kann ein komplettes PDF in einem Durchlauf aufgeteilt werden.</p>
+<h2>Zustandsspeicherung</h2>
+<p>Beim Beenden wird der Fortschritt neben der PDF-Datei gespeichert. Beim nächsten Öffnen der gleichen Datei wird automatisch an der letzten Position fortgefahren. Der Titel wird <strong>nicht</strong> gespeichert — nur die Seitenposition.</p>
+<h2>Ausgabedateien</h2>
+<p>Die extrahierten Abschnitte werden im Unterordner <code>Manual_Splits</code> neben der Original-PDF gespeichert:</p>
+<pre class="codehilite"><code>/Pfad/zur/
+├── Liedermappe.pdf
+└── Manual_Splits/
+    ├── Amazing Grace.pdf
+    ├── Ich sing dir ein Lied.pdf
+    └── ...
+</code></pre>
+
+<h3>Dateinamen</h3>
+<p>Der eingegebene Titel wird als Dateiname verwendet. Umlaute werden dabei umgewandelt:</p>
+<table>
+<thead>
+<tr>
+<th>Eingabe</th>
+<th>Dateiname</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Über den Wolken</code></td>
+<td><code>Ueber den Wolken.pdf</code></td>
+</tr>
+<tr>
+<td><code>Ännchen</code></td>
+<td><code>Aennchen.pdf</code></td>
+</tr>
+<tr>
+<td><code>Möhre</code></td>
+<td><code>Moehre.pdf</code></td>
+</tr>
+<tr>
+<td><code>Große Liebe</code></td>
+<td><code>Grosse Liebe.pdf</code></td>
+</tr>
+</tbody>
+</table>
+<p>Sonderzeichen, die keine Buchstaben/Zahlen sind, werden entfernt. Wenn der Titel nach der Bereinigung leer ist, wird <code>Song_Seite_N</code> verwendet.</p>
+<h2>Tastaturkürzel</h2>
+<table>
+<thead>
+<tr>
+<th>Taste</th>
+<th>Aktion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>←</code></td>
+<td>Vorherige Seite</td>
+</tr>
+<tr>
+<td><code>→</code></td>
+<td>Nächste Seite</td>
+</tr>
+<tr>
+<td><code>F</code></td>
+<td>Startseite setzen + Titeleingabe</td>
+</tr>
+<tr>
+<td><code>L</code></td>
+<td>Endseite setzen + Speichern</td>
+</tr>
+<tr>
+<td><code>Enter</code></td>
+<td>Titel bestätigen (im Eingabefeld)</td>
+</tr>
+<tr>
+<td><code>Esc</code></td>
+<td>Titeleingabe abbrechen</td>
+</tr>
+</tbody>
+</table>
+<h2>Titelerkennung (OCR)</h2>
+<p>Die Anwendung erkennt Titel automatisch aus der oberen 10% der Startseite.</p>
+<ul>
+<li>Erkennung in Deutsch und Englisch</li>
+<li>Keine externe Software nötig</li>
+<li>Ergebnis wird automatisch ins Titelfeld eingetragen, kann aber jederzeit manuell korrigiert werden</li>
+</ul>
+<h2>Fehlermeldungen</h2>
+<ul>
+<li><strong>Datei nicht gefunden</strong> — Der angegebene Pfad ist ungültig</li>
+<li><strong>PDF konnte nicht geladen werden</strong> — Die Datei ist kein gültiges PDF</li>
+<li><strong>Keine Datei ausgewählt</strong> — Der Dateiauswahl-Dialog wurde abgebrochen</li>
+<li><strong>Endseite vor Startseite</strong> — <code>L</code> wurde gedrückt, bevor eine Startseite gesetzt wurde</li>
+<li><strong>Letzte Seite erreicht</strong> — Das Ende des Dokuments wurde erreicht</li>
+</ul>
+<h2>Beenden</h2>
+<p>Die Anwendung beendet sich automatisch, wenn das Hauptfenster geschlossen wird.</p>
+</body>
+</html>

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDFTrenner — Systemdokumentation</title>
+<style>
+body {
+    font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #222;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    background: #fff;
+}
+h1 {
+    font-size: 28px;
+    border-bottom: 2px solid #4a9eff;
+    padding-bottom: 8px;
+    margin-top: 0;
+    color: #1a1a1a;
+}
+h2 {
+    font-size: 20px;
+    color: #333;
+    margin-top: 28px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 4px;
+}
+h3 {
+    font-size: 17px;
+    color: #444;
+    margin-top: 20px;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 14px;
+}
+th, td {
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+th {
+    background-color: #f0f4f8;
+    font-weight: bold;
+}
+tr:nth-child(even) {
+    background-color: #fafafa;
+}
+code {
+    background-color: #f4f4f4;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: "SF Mono", "Menlo", "Monaco", monospace;
+    font-size: 13px;
+}
+pre {
+    background-color: #f4f4f4;
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.5;
+}
+pre code {
+    background: none;
+    padding: 0;
+}
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 16px auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+strong, b {
+    color: #1a1a1a;
+}
+p {
+    margin: 6px 0;
+}
+ul, ol {
+    margin: 4px 0;
+    padding-left: 20px;
+}
+li {
+    margin: 3px 0;
+}
+@media print {
+    body { max-width: 100%; padding: 0; }
+    h2 { page-break-after: avoid; }
+    h3 { page-break-after: avoid; }
+}
+</style>
+</head>
+<body>
+<h1>PDFTrenner Swift — Systemdokumentation</h1>
+<h2>Architekturübersicht</h2>
+<p>PDFTrenner Swift ist eine native macOS-Anwendung, geschrieben in SwiftUI mit PDFKit-Anbindung. Die Anwendung wird als Swift-Package mit einem einzelnen ausführbaren Target gebaut.</p>
+<pre class="codehilite"><code>PDFTrennerSwift/
+├── Package.swift                          # Swift-Package-Definition
+├── build_dmg.sh                           # Build-Skript (Universal Binary + DMG)
+└── PDFTrennerSwift/
+    ├── PDFTrennerApp.swift                # @main App-Einstieg, AppDelegate
+    ├── ContentView.swift                   # UI + ViewModel + TitlePanelController
+    ├── OCRHelper.swift                    # Vision-basierte OCR-Titelerkennung
+    ├── PDFDocumentHelper.swift            # PDF-Seitenextraktion
+    ├── StateHelper.swift                  # Persistenz des Bearbeitungsstatus
+    └── Assets.xcassets/                  # App-Icon (macOS-Stil, abgerundet)
+</code></pre>
+
+<h2>Komponenten</h2>
+<h3>PDFTrennerApp.swift</h3>
+<ul>
+<li><strong>Einstiegspunkt</strong>: <code>@main struct PDFTrennerApp: App</code></li>
+<li><strong>AppDelegate</strong>: Sorgt für <code>applicationShouldTerminateAfterLastWindowClosed → true</code>, damit die App beim Schließen des Fensters beendet wird</li>
+<li><strong>Fenster</strong>: <code>WindowGroup</code> mit <code>ContentView</code>, Mindestgröße 600×700</li>
+</ul>
+<h3>ContentView.swift</h3>
+<p>Hauptdatei, enthält drei Komponenten:</p>
+<h4>PDFViewModel (<code>ObservableObject</code>)</h4>
+<p>Zentrale Zustandsverwaltung:</p>
+<table>
+<thead>
+<tr>
+<th>Eigenschaft</th>
+<th>Typ</th>
+<th>Beschreibung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>document</code></td>
+<td><code>PDFDocument?</code></td>
+<td>Geladenes PDF</td>
+</tr>
+<tr>
+<td><code>currentPage</code></td>
+<td><code>Int</code></td>
+<td>Aktuelle Seitennummer (0-basiert)</td>
+</tr>
+<tr>
+<td><code>startPage</code></td>
+<td><code>Int</code></td>
+<td>Markierte Startseite</td>
+</tr>
+<tr>
+<td><code>endPage</code></td>
+<td><code>Int</code></td>
+<td>Markierte Endseite</td>
+</tr>
+<tr>
+<td><code>statusText</code></td>
+<td><code>String</code></td>
+<td>Statuszeilen-Anzeige</td>
+</tr>
+<tr>
+<td><code>isLoading</code></td>
+<td><code>Bool</code></td>
+<td>Splash-Screen aktiv</td>
+</tr>
+<tr>
+<td><code>showSaveDialog</code></td>
+<td><code>Bool</code></td>
+<td>Titeleingabe-Panel sichtbar</td>
+</tr>
+<tr>
+<td><code>detectedTitle</code></td>
+<td><code>String</code></td>
+<td>OCR-Ergebnis</td>
+</tr>
+<tr>
+<td><code>currentTitle</code></td>
+<td><code>String</code></td>
+<td>Aktueller/durch den Benutzer bestätigter Titel</td>
+</tr>
+<tr>
+<td><code>errorMessage</code></td>
+<td><code>String?</code></td>
+<td>Fehlertext</td>
+</tr>
+<tr>
+<td><code>pdfPath</code></td>
+<td><code>String?</code></td>
+<td>Pfad der geladenen PDF</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Workflow-Methoden:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Methode</th>
+<th>Beschreibung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>onAppear()</code></td>
+<td>Argumentauswertung oder Dateiauswahl</td>
+</tr>
+<tr>
+<td><code>openFileChooser()</code></td>
+<td><code>NSOpenPanel</code> für PDF-Dateien</td>
+</tr>
+<tr>
+<td><code>loadPDF(at:)</code></td>
+<td>PDF laden, State wiederherstellen</td>
+</tr>
+<tr>
+<td><code>setFirst()</code></td>
+<td>Startseite = aktuelle Seite, OCR starten, Titeleingabe öffnen</td>
+</tr>
+<tr>
+<td><code>setLast()</code></td>
+<td>Endseite = aktuelle Seite, <code>saveSplit()</code> aufrufen</td>
+</tr>
+<tr>
+<td><code>saveSplit()</code></td>
+<td>Seiten extrahieren, speichern, nächste Startseite</td>
+</tr>
+<tr>
+<td><code>runOCR()</code></td>
+<td>Asynchrone OCR im Hintergrund-Thread</td>
+</tr>
+<tr>
+<td><code>confirmTitle()</code> / <code>cancelTitle()</code></td>
+<td>Titeleingabe bestätigen/abbrechen</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key-Monitor</strong>: Lokaler <code>NSEvent.addLocalMonitorForEvents(.keyDown)</code> fängt Pfeiltasten sowie <code>F</code> und <code>L</code> ab. Während die Titeleingabe aktiv ist, werden Tastenkürzel blockiert.</p>
+<h4>TitlePanelController (<code>NSObject</code>, <code>NSTextFieldDelegate</code>)</h4>
+<p>Erbt von <code>NSObject</code>, da <code>@objc</code> in Swift-Structs nicht möglich ist.</p>
+<ul>
+<li>Erstellt ein <code>NSPanel</code> (<code>.utilityWindow</code>, <code>.floating</code>) direkt rechts neben dem Hauptfenster</li>
+<li>Positionierung: <code>mainFrame.origin.x + mainFrame.width + 6</code> (6px Lücke)</li>
+<li>Enthält: Header-Label, <code>NSTextField</code> mit Platzhalter "Songtitel", Abbrechen/OK-Buttons</li>
+<li><code>updateTextField(_:)</code> ermöglicht asynchrates Update des OCR-Ergebnisses ins Textfeld</li>
+</ul>
+<h4>ContentView (<code>View</code>)</h4>
+<ul>
+<li>Drei Zustände: Splash → Fehler → PDF-Ansige</li>
+<li>Reagiert auf <code>$showSaveDialog</code> (<code>.onReceive</code>) → Panel öffnen/schließen</li>
+<li>Reagiert auf <code>$detectedTitle</code> → Textfeld aktualisieren</li>
+<li>Fehler-Alert über <code>.alert(isPresented:)</code></li>
+</ul>
+<h3>OCRHelper.swift</h3>
+<p>Native OCR-Implementierung mit dem Vision-Framework:</p>
+<pre class="codehilite"><code class="language-swift">enum OCRHelper {
+    static func recognizeTitle(from document: PDFDocument, pageIndex: Int) -&gt; String
+}
+</code></pre>
+
+<p><strong>Ablauf:</strong>
+1. Oberer 10%-Streifen der Seite croppen (<code>CGRect</code> mit 10% der Seitenhöhe)
+2. Gecroppptes PDF-Seiten-Bild mit <code>CGContext</code> in 2x-Auflösung rendern
+3. <code>VNRecognizeTextRequest</code> mit <code>.accurate</code>-Erkennung und Sprachen <code>["de", "en"]</code>
+4. Ergebnis: Zusammenhängender Text, bereinigt um überflüssige Leerzeichen</p>
+<p><strong>Unterschied zur JavaFX-Variante:</strong> Kein externer Tesseract-Prozess, kein <code>Pipe</code>/<code>Process</code>-Aufruf, keine temporäre PNG-Datei. Vision ist Teil des Betriebssystems.</p>
+<h3>PDFDocumentHelper.swift</h3>
+<pre class="codehilite"><code class="language-swift">enum PDFDocumentHelper {
+    static func extractPages(from document: PDFDocument, start: Int, end: Int) -&gt; PDFDocument?
+}
+</code></pre>
+
+<p>Erstellt ein neues <code>PDFDocument</code> und fügt die Seiten <code>start...end</code> (inklusive) ein. Rückgabe: neues Dokument oder <code>nil</code> bei Fehler.</p>
+<h3>StateHelper.swift</h3>
+<pre class="codehilite"><code class="language-swift">enum StateHelper {
+    static func loadState(for pdfPath: String) -&gt; Int
+    static func saveState(startPage: Int, for pdfPath: String)
+}
+</code></pre>
+
+<ul>
+<li><strong>State-Datei</strong>: <code>&lt;Dateiname&gt;.pdf.pdftrenner.state</code> im gleichen Verzeichnis wie die PDF</li>
+<li><strong>Format</strong>: Zwei Zeilen — Kommentar (<code>#PDFTrenner State</code>) und <code>startPage=&lt;N&gt;</code></li>
+<li><strong>Laden</strong>: Gibt die gespeicherte Seitennummer zurück, oder <code>-1</code> wenn keine State-Datei existiert</li>
+<li><strong>Speichern</strong>: Nach jedem Speichervorgang wird die nächste Startseite gespeichert</li>
+</ul>
+<h2>Build-System</h2>
+<h3>Package.swift</h3>
+<pre class="codehilite"><code class="language-swift">// swift-tools-version: 5.9
+platforms: [.macOS(.v12)]
+targets: [.executableTarget(name: &quot;PDFTrennerSwift&quot;, path: &quot;PDFTrennerSwift&quot;,
+            resources: [.process(&quot;Assets.xcassets&quot;)])]
+</code></pre>
+
+<p>Abhängigkeiten: Keine externen Packages. Nur Framework-Abhängigkeiten:
+- <code>SwiftUI</code>
+- <code>PDFKit</code>
+- <code>Vision</code>
+- <code>AppKit</code></p>
+<h3>build_dmg.sh</h3>
+<p>Build-Pipeline für die Distribution:</p>
+<ol>
+<li><strong>Kompilieren</strong>: <code>swift build -c release --arch arm64</code> und <code>--arch x86_64</code></li>
+<li><strong>Universal Binary</strong>: <code>lipo -create</code> mergt ARM + Intel</li>
+<li><strong>App-Bundle</strong>: <code>PDFTrenner.app/Contents/{MacOS,Resources}</code> erstellen, <code>Info.plist</code> schreiben</li>
+<li><strong>Icon-Generierung</strong>: Python-Script mit Pillow — 18% Padding, 22.35% Corner-Radius, macOS-konforme Abrundung</li>
+<li><strong>Iconset → .icns</strong>: <code>sips</code> skaliert, <code>iconutil</code> erzeugt <code>.icns</code></li>
+<li><strong>DMG</strong>: <code>hdiutil create</code> mit <code>UDZO</code>-Kompression</li>
+</ol>
+<p><strong>Info.plist:</strong>
+- <code>CFBundleIdentifier</code>: <code>de.posy.pdftrenner.swift</code>
+- <code>LSMinimumSystemVersion</code>: 12.0
+- <code>CFBundleIconFile</code>: <code>AppIcon</code></p>
+<h2>Datenfluss</h2>
+<p><img alt="Datenfluss-Diagramm" src="workflow.svg" /></p>
+<h2>Fehlerbehandlung</h2>
+<table>
+<thead>
+<tr>
+<th>Fehler</th>
+<th>Auslöser</th>
+<th>Anzeige</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Datei nicht gefunden</td>
+<td>Ungültiger Pfad</td>
+<td>Alert + Fehler-View</td>
+</tr>
+<tr>
+<td>PDF Ladefehler</td>
+<td>Korrupte Datei</td>
+<td>Alert + Fehler-View</td>
+</tr>
+<tr>
+<td>Keine Datei ausgewählt</td>
+<td>Abbruch im Dialog</td>
+<td>Fehler-View mit "Datei auswählen"-Button</td>
+</tr>
+<tr>
+<td>Endseite &lt; Startseite</td>
+<td><code>L</code> vor <code>F</code></td>
+<td>Alert-Dialog</td>
+</tr>
+<tr>
+<td>Speichern fehlgeschlagen</td>
+<td><code>PDFDocumentHelper.extractPages</code> → <code>nil</code></td>
+<td>Alert-Dialog</td>
+</tr>
+<tr>
+<td>OCR fehlgeschlagen</td>
+<td>Vision-Request-Fehler</td>
+<td>Leeres Textfeld (kein Absturz)</td>
+</tr>
+</tbody>
+</table>
+<p>Alle Fehler werden über <code>@Published var showError: Bool</code> und <code>.alert(isPresented:)</code> angezeigt. Im Splash-Modus wird die Fehlermeldung direkt im Splash-Screen gezeigt.</p>
+<h2>Platform-spezifische Details</h2>
+<h3>macOS-App (PDFTrennerSwift)</h3>
+<table>
+<thead>
+<tr>
+<th>Aspekt</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mindestsystem</td>
+<td>macOS 12 Monterey</td>
+</tr>
+<tr>
+<td>Architektur</td>
+<td>Universal Binary (arm64 + x86_64)</td>
+</tr>
+<tr>
+<td>Titeleingabe</td>
+<td><code>NSPanel</code> mit <code>.utilityWindow</code> + <code>.floating</code>, positioniert rechts neben dem Hauptfenster</td>
+</tr>
+<tr>
+<td>Dateiauswahl</td>
+<td><code>NSOpenPanel</code> mit PDF-Filter</td>
+</tr>
+<tr>
+<td>Tastaturkürzel</td>
+<td><code>NSEvent.addLocalMonitorForEvents(.keyDown)</code> — F, L, Pfeiltasten</td>
+</tr>
+<tr>
+<td>Fenster Ende</td>
+<td><code>applicationShouldTerminateAfterLastWindowClosed → true</code></td>
+</tr>
+</tbody>
+</table>
+<h3>iOS-App (PDFTrenneriOS)</h3>
+<table>
+<thead>
+<tr>
+<th>Aspekt</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mindestsystem</td>
+<td>iOS 16</td>
+</tr>
+<tr>
+<td>Zielgeräte</td>
+<td>iPhone + iPad</td>
+</tr>
+<tr>
+<td>Titeleingabe</td>
+<td>SwiftUI <code>.sheet</code> mit <code>.presentationDetents([.medium])</code></td>
+</tr>
+<tr>
+<td>Dateiauswahl</td>
+<td><code>UIDocumentPickerViewController</code> mit PDF-UTI</td>
+</tr>
+<tr>
+<td>OCR</td>
+<td>Gleiches <code>Vision</code>-Framework</td>
+</tr>
+<tr>
+<td>Tastatur</td>
+<td>Keine globalen Shortcuts — Buttons in der UI</td>
+</tr>
+</tbody>
+</table>
+<h2>Konfiguration</h2>
+<p>Keine Konfigurationsdatei. Alle Einstellungen sind im Quellcode festgelegt:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Wert</th>
+<th>Datei</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OCR-Sprachen</td>
+<td><code>["de", "en"]</code></td>
+<td>OCRHelper.swift</td>
+</tr>
+<tr>
+<td>OCR-Erkennungslevel</td>
+<td><code>.accurate</code></td>
+<td>OCRHelper.swift</td>
+</tr>
+<tr>
+<td>OCR-Bereich</td>
+<td>Oberer 10% der Seite</td>
+<td>OCRHelper.swift</td>
+</tr>
+<tr>
+<td>Render-Auflösung</td>
+<td>2x Skalierung</td>
+<td>OCRHelper.swift</td>
+</tr>
+<tr>
+<td>State-Datei</td>
+<td><code>&lt;PDF-Name&gt;.pdf.pdftrenner.state</code></td>
+<td>StateHelper.swift</td>
+</tr>
+<tr>
+<td>Ausgabeordner</td>
+<td><code>Manual_Splits/</code> neben der PDF</td>
+<td>ContentView.swift</td>
+</tr>
+<tr>
+<td>Dateiname-Umlaut-Konvertierung</td>
+<td>ä→ae, ö→oe, ü→ue, ß→ss, dann <code>[^a-zA-Z0-9 _-]</code> entfernen</td>
+<td>ContentView.swift</td>
+</tr>
+<tr>
+<td>Fallback-Dateiname</td>
+<td><code>Song_Seite_N</code></td>
+<td>ContentView.swift</td>
+</tr>
+<tr>
+<td>Panel-Lücke</td>
+<td>6px rechts neben Hauptfenster</td>
+<td>ContentView.swift (macOS)</td>
+</tr>
+</tbody>
+</table>
+<h2>Abhängigkeiten</h2>
+<table>
+<thead>
+<tr>
+<th>Framework</th>
+<th>Zweck</th>
+<th>Plattform</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SwiftUI</td>
+<td>UI-Framework</td>
+<td>macOS, iOS</td>
+</tr>
+<tr>
+<td>PDFKit</td>
+<td>PDF-Anzeige und -Verarbeitung</td>
+<td>macOS, iOS</td>
+</tr>
+<tr>
+<td>Vision</td>
+<td>OCR-Titelerkennung (<code>VNRecognizeTextRequest</code>)</td>
+<td>macOS, iOS</td>
+</tr>
+<tr>
+<td>AppKit</td>
+<td><code>NSPanel</code>, <code>NSOpenPanel</code>, <code>NSEvent</code></td>
+<td>Nur macOS</td>
+</tr>
+<tr>
+<td>UIKit</td>
+<td><code>UIDocumentPickerViewController</code></td>
+<td>Nur iOS</td>
+</tr>
+</tbody>
+</table>
+<p>Keine externen Swift-Packages. Keine externen Binaries (Tesseract wird <strong>nicht</strong> verwendet).</p>
+</body>
+</html>
