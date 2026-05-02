@@ -1,6 +1,7 @@
 import SwiftUI
 import PDFKit
 import UniformTypeIdentifiers
+import UIKit
 
 // MARK: - ViewModel
 class PDFViewModel: ObservableObject {
@@ -16,45 +17,44 @@ class PDFViewModel: ObservableObject {
     @Published var showTitleSheet = false
     @Published var detectedTitle = ""
     @Published var currentTitle = ""
+    @Published var showFilePicker = false
 
     var pdfPath: String?
     private var numPages = 0
     private var hadSavedState = false
 
     func onAppear() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self.openFileChooser() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.showFilePicker = true
+        }
     }
 
     func openFileChooser() {
-        errorMessage = nil
-        let picker = DocumentPickerWrapper()
-        picker.pick { [weak self] url in
-            guard let self, let url else {
-                self?.errorMessage = "Keine Datei ausgewählt."
-                self?.isLoading = false
-                return
-            }
-            self.pdfPath = url.path
-            self.loadPDF(at: url.path)
-        }
+        showFilePicker = true
     }
 
-    private func loadPDF(at path: String) {
-        let file = URL(fileURLWithPath: path)
-        splashMessage = "Lade: \(file.lastPathComponent)"
+    func loadPDF(at url: URL) {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+
+        let path = url.path
+        splashMessage = "Lade: \(url.lastPathComponent)"
 
         guard FileManager.default.fileExists(atPath: path) else {
             errorMessage = "Datei nicht gefunden:\n\(path)"
+            isLoading = false
             return
         }
 
-        guard let doc = PDFDocument(url: file) else {
-            errorMessage = "PDF konnte nicht geladen werden:\n\(path)"
+        guard let doc = PDFDocument(url: url) else {
+            errorMessage = "PDF konnte nicht geladen werden."
+            isLoading = false
             return
         }
 
         document = doc
         numPages = doc.pageCount
+        pdfPath = path
         splashMessage = "Bereite Renderer vor (\(numPages) Seiten)…"
 
         let saved = StateHelper.loadState(for: path)
@@ -169,7 +169,7 @@ class PDFViewModel: ObservableObject {
 
     func updateStatus() {
         let titleInfo = currentTitle.isEmpty ? "" : " | Titel: \(currentTitle)"
-        statusText = "Seite: \(currentPage + 1) / \(numPages) | Start: Seite \(startPage + 1)\(titleInfo)"
+        statusText = "Seite \(currentPage + 1)/\(numPages) | Start: \(startPage + 1)\(titleInfo)"
     }
 
     private func showError(message: String) {
@@ -178,42 +178,17 @@ class PDFViewModel: ObservableObject {
     }
 }
 
-// MARK: - Document Picker Wrapper
-class DocumentPickerWrapper: NSObject, UIDocumentPickerDelegate {
-    private var completion: ((URL?) -> Void)?
-
-    func pick(completion: @escaping (URL?) -> Void) {
-        self.completion = completion
-        let types = [UTType.pdf]
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
-        picker.allowsMultipleSelection = false
-        picker.delegate = self
-
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootVC = windowScene.windows.first?.rootViewController {
-            var topVC = rootVC
-            while let presented = topVC.presentedViewController {
-                topVC = presented
-            }
-            topVC.present(picker, animated: true)
-        }
-    }
-
-    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-        completion?(urls.first)
-    }
-
-    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-        completion?(nil)
-    }
-}
-
 // MARK: - ContentView
 struct ContentView: View {
     @ObservedObject var vm: PDFViewModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isPadLayout: Bool {
+        horizontalSizeClass == .regular
+    }
 
     var body: some View {
-        ZStack {
+        Group {
             if vm.isLoading {
                 splashView
             } else if let error = vm.errorMessage, !vm.showTitleSheet {
@@ -223,6 +198,19 @@ struct ContentView: View {
             } else {
                 splashView
             }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(UIColor.systemBackground))
+        .fullScreenCover(isPresented: $vm.showFilePicker) {
+            DocumentPicker { url in
+                vm.showFilePicker = false
+                vm.loadPDF(at: url)
+            } onCancel: {
+                vm.showFilePicker = false
+                vm.errorMessage = "Keine Datei ausgewählt."
+                vm.isLoading = false
+            }
+            .ignoresSafeArea()
         }
         .sheet(isPresented: $vm.showTitleSheet) {
             TitleSheetView(vm: vm)
@@ -236,32 +224,40 @@ struct ContentView: View {
     }
 
     private var splashView: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
+            Spacer()
             Image(systemName: "doc.richtext")
-                .font(.system(size: 48))
+                .font(.system(size: isPadLayout ? 46 : 56))
                 .foregroundColor(.accentColor)
             Text("PDFTrenner")
-                .font(.title2.bold())
+                .font(.system(size: isPadLayout ? 28 : 34, weight: .bold))
             Text(vm.splashMessage)
-                .font(.caption)
+                .font(.system(size: isPadLayout ? 15 : 17))
                 .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func errorView(_ msg: String) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
+            Spacer()
             Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 36))
+                .font(.system(size: isPadLayout ? 36 : 44))
                 .foregroundColor(.red)
             Text(msg)
-                .font(.body)
+                .font(.system(size: isPadLayout ? 16 : 18))
                 .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
             Button("Datei auswählen…") {
                 vm.openFileChooser()
             }
             .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            Spacer()
         }
-        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var pdfView: some View {
@@ -269,20 +265,88 @@ struct ContentView: View {
             iOSPDFKitView(document: vm.document, currentPage: vm.currentPage)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            HStack(spacing: 8) {
-                Text(vm.statusText)
-                    .font(.system(.caption, design: .monospaced))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Spacer()
-                Button("◀") { vm.prevPage() }
-                Button("▶") { vm.nextPage() }
-                Button("Start (F)") { vm.setFirst() }
-                    .buttonStyle(.borderedProminent)
-                Button("Ende (L)") { vm.setLast() }
+            toolbarBar
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var toolbarBar: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Steuerung")
+                        .font(.system(size: isPadLayout ? 13 : 12, weight: .semibold))
+                        .foregroundColor(.secondary)
+                    statusText
+                }
+
+                Spacer(minLength: 12)
+
+                pageNavButtons
             }
-            .padding(8)
-            .background(Color(UIColor.secondarySystemBackground))
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    Spacer(minLength: 0)
+                    actionButtons
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    actionButtons
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(UIColor.secondarySystemBackground))
+        )
+        .padding(.horizontal, 12)
+        .padding(.bottom, 12)
+    }
+
+    private var pageNavButtons: some View {
+        HStack(spacing: 8) {
+            Button { vm.prevPage() } label: {
+                Image(systemName: "chevron.left")
+            }
+            .disabled(vm.currentPage == 0)
+
+            Button { vm.nextPage() } label: {
+                Image(systemName: "chevron.right")
+            }
+        }
+    }
+
+    private var statusText: some View {
+        Text(vm.statusText)
+            .font(.system(size: isPadLayout ? 13 : 12, design: .monospaced))
+            .lineLimit(2)
+            .fixedSize(horizontal: false, vertical: true)
+            .foregroundColor(.primary)
+    }
+
+    private var actionButtons: some View {
+        HStack(spacing: 12) {
+            Button { vm.setFirst() } label: {
+                Label("Start", systemImage: "text.cursor")
+                    .font(.system(size: isPadLayout ? 15 : 16, weight: .semibold))
+                    .lineLimit(1)
+                    .frame(minWidth: 128)
+            }
+            .buttonStyle(.borderedProminent)
+            .fixedSize(horizontal: true, vertical: false)
+
+            Button { vm.setLast() } label: {
+                Label("Ende", systemImage: "scissors")
+                    .font(.system(size: isPadLayout ? 15 : 16, weight: .semibold))
+                    .lineLimit(1)
+                    .frame(minWidth: 128)
+            }
+            .buttonStyle(.bordered)
+            .fixedSize(horizontal: true, vertical: false)
         }
     }
 }
@@ -291,19 +355,25 @@ struct ContentView: View {
 struct TitleSheetView: View {
     @ObservedObject var vm: PDFViewModel
     @FocusState private var isTextFieldFocused: Bool
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isPadLayout: Bool {
+        horizontalSizeClass == .regular
+    }
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 12) {
-                Text("Startseite \(vm.startPage + 1) — Titel:")
-                    .font(.headline)
+            VStack(spacing: 16) {
+                Text("Startseite \(vm.startPage + 1) — Titel festlegen")
+                    .font(.system(size: isPadLayout ? 18 : 19, weight: .semibold))
+                    .multilineTextAlignment(.center)
 
                 TextField("Songtitel", text: $vm.currentTitle)
                     .textFieldStyle(.roundedBorder)
-                    .font(.body)
+                    .font(.system(size: isPadLayout ? 18 : 20))
                     .focused($isTextFieldFocused)
                     .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                             isTextFieldFocused = true
                         }
                     }
@@ -312,21 +382,25 @@ struct TitleSheetView: View {
                             vm.currentTitle = newTitle
                         }
                     }
+                    .submitLabel(.done)
+                    .onSubmit { vm.confirmTitle() }
 
-                HStack(spacing: 16) {
-                    Button("Abbrechen") {
-                        vm.cancelTitle()
-                    }
-                    Button("OK") {
-                        vm.confirmTitle()
-                    }
-                    .buttonStyle(.borderedProminent)
+                HStack(spacing: 20) {
+                    Button("Abbrechen") { vm.cancelTitle() }
+                        .font(.system(size: isPadLayout ? 15 : 16, weight: .medium))
+                    Button("OK") { vm.confirmTitle() }
+                        .buttonStyle(.borderedProminent)
+                        .font(.system(size: isPadLayout ? 15 : 16, weight: .semibold))
                 }
+                Spacer()
             }
-            .padding(16)
+            .padding(.horizontal, 28)
+            .padding(.vertical, 24)
             .navigationTitle("Titel festlegen")
+            .navigationBarTitleDisplayMode(.inline)
         }
-        .presentationDetents([.medium])
+        .navigationViewStyle(.stack)
+        .presentationDetents([.medium, .large])
     }
 }
 
@@ -340,19 +414,63 @@ struct iOSPDFKitView: UIViewRepresentable {
         view.autoScales = true
         view.displayMode = .singlePage
         view.displayDirection = .vertical
+        view.backgroundColor = UIColor.systemBackground
         return view
     }
 
-    func updateUIView(_ uiView: PDFView, context: Context) {
-        if uiView.document !== document {
-            uiView.document = document
+    func updateUIView(_ pdfView: PDFView, context: Context) {
+        if pdfView.document !== document {
+            pdfView.document = document
         }
-        if let doc = document, currentPage >= 0 && currentPage < doc.pageCount {
-            if let page = doc.page(at: currentPage) {
-                DispatchQueue.main.async {
-                    uiView.go(to: page)
-                }
+        if let doc = document, currentPage >= 0 && currentPage < doc.pageCount,
+           let page = doc.page(at: currentPage) {
+            DispatchQueue.main.async {
+                pdfView.go(to: page)
             }
+        }
+    }
+}
+
+// MARK: - File Picker
+struct DocumentPicker: UIViewControllerRepresentable {
+    let onPick: (URL) -> Void
+    let onCancel: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick, onCancel: onCancel)
+    }
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.pdf], asCopy: true)
+        picker.delegate = context.coordinator
+        picker.allowsMultipleSelection = false
+        picker.shouldShowFileExtensions = true
+        picker.modalPresentationStyle = .fullScreen
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {
+    }
+
+    final class Coordinator: NSObject, UIDocumentPickerDelegate {
+        private let onPick: (URL) -> Void
+        private let onCancel: () -> Void
+
+        init(onPick: @escaping (URL) -> Void, onCancel: @escaping () -> Void) {
+            self.onPick = onPick
+            self.onCancel = onCancel
+        }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else {
+                onCancel()
+                return
+            }
+            onPick(url)
+        }
+
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            onCancel()
         }
     }
 }
