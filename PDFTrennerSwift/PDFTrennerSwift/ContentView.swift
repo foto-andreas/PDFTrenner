@@ -101,9 +101,106 @@ class TitlePanelController: NSObject, NSTextFieldDelegate {
     }
 }
 
+class PageJumpPanelController: NSObject, NSTextFieldDelegate {
+    private var panel: NSPanel?
+    private weak var vm: PDFViewModel?
+    private var textField: NSTextField?
+
+    func show(vm: PDFViewModel, mainWindow: NSWindow?) {
+        close()
+        self.vm = vm
+
+        let myPanel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 360, height: 130),
+                              styleMask: [.titled, .closable, .utilityWindow],
+                              backing: .buffered, defer: false)
+        myPanel.title = "Seite springen"
+        myPanel.isFloatingPanel = true
+        myPanel.level = .floating
+
+        let headerLabel = NSTextField(labelWithString: "Zu einer Seite im PDF springen:")
+        headerLabel.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+
+        let textField = NSTextField()
+        textField.placeholderString = "Seitennummer"
+        textField.stringValue = "\(vm.currentPage + 1)"
+        textField.font = NSFont.systemFont(ofSize: 13)
+        textField.lineBreakMode = .byTruncatingTail
+        textField.tag = 100
+        textField.delegate = self
+        self.textField = textField
+
+        let cancelButton = NSButton(title: "Abbrechen", target: self, action: #selector(cancelAction))
+        cancelButton.bezelStyle = .roundRect
+        cancelButton.keyEquivalent = "\u{1b}"
+
+        let okButton = NSButton(title: "Springen", target: self, action: #selector(confirmAction))
+        okButton.bezelStyle = .rounded
+        okButton.keyEquivalent = "\r"
+
+        let buttonStack = NSStackView()
+        buttonStack.orientation = .horizontal
+        buttonStack.spacing = 8
+        buttonStack.addView(cancelButton, in: .trailing)
+        buttonStack.addView(okButton, in: .trailing)
+
+        let stack = NSStackView()
+        stack.orientation = .vertical
+        stack.spacing = 8
+        stack.edgeInsets = NSEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
+        stack.addView(headerLabel, in: .leading)
+        stack.addView(textField, in: .leading)
+        stack.addView(buttonStack, in: .trailing)
+
+        myPanel.contentView = stack
+
+        if let mainWindow = mainWindow {
+            let mainFrame = mainWindow.frame
+            let gap: CGFloat = 6
+            let panelX = mainFrame.origin.x + mainFrame.width + gap
+            let mainBottomY = mainFrame.origin.y
+            myPanel.setFrameOrigin(NSPoint(x: panelX, y: mainBottomY))
+        }
+
+        myPanel.makeKeyAndOrderFront(nil)
+        textField.becomeFirstResponder()
+        textField.selectText(nil)
+
+        self.panel = myPanel
+    }
+
+    func close() {
+        textField = nil
+        panel?.close()
+        panel = nil
+    }
+
+    @objc private func confirmAction() {
+        guard let textField = panel?.contentView?.viewWithTag(100) as? NSTextField else { return }
+        if let pageNumber = Int(textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)) {
+            if vm?.jumpToPage(pageNumber) == true {
+                close()
+            }
+        } else {
+            vm?.presentError(message: "Bitte eine gültige Seitennummer eingeben.")
+        }
+    }
+
+    @objc private func cancelAction() {
+        close()
+    }
+
+    func controlTextDidEndEditing(_ obj: Notification) {
+        guard obj.object is NSTextField else { return }
+        if let event = NSApp.currentEvent, event.type == .keyDown, event.specialKey == .carriageReturn {
+            confirmAction()
+        }
+    }
+}
+
 struct ContentView: View {
     @StateObject private var vm = PDFViewModel()
     @State private var titlePanelController = TitlePanelController()
+    @State private var pageJumpPanelController = PageJumpPanelController()
 
     var body: some View {
         Group {
@@ -128,6 +225,14 @@ struct ContentView: View {
         .onReceive(vm.$detectedTitle) { title in
             if !title.isEmpty {
                 titlePanelController.updateTextField(title)
+            }
+        }
+        .onReceive(vm.$showPageJumpPanel) { show in
+            if show {
+                let mainWindow = NSApp.windows.first(where: { $0.isVisible })
+                pageJumpPanelController.show(vm: vm, mainWindow: mainWindow)
+            } else {
+                pageJumpPanelController.close()
             }
         }
         .alert(isPresented: $vm.showError) {
@@ -192,6 +297,7 @@ struct ContentView: View {
                 Button(" → ") { vm.nextPage() }
                 Button("Start+F") { vm.setFirst() }
                     .keyboardShortcut("f", modifiers: [])
+                Button("Seite") { vm.showPageJumpDialog() }
                 Button("Ende+L") { vm.setLast() }
                     .keyboardShortcut("l", modifiers: [])
             }
@@ -246,6 +352,7 @@ class PDFViewModel: ObservableObject {
     @Published var showError = false
     @Published var errorDetail = ErrorDetail(message: "")
     @Published var showSaveDialog = false
+    @Published var showPageJumpPanel = false
     @Published var detectedTitle = ""
     @Published var currentTitle = ""
 
@@ -342,6 +449,22 @@ class PDFViewModel: ObservableObject {
         updateStatus()
     }
 
+    func showPageJumpDialog() {
+        showPageJumpPanel = true
+    }
+
+    func jumpToPage(_ pageNumber: Int) -> Bool {
+        guard pageNumber >= 1, pageNumber <= numPages else {
+            let msg = "Seitennummer muss zwischen 1 und \(numPages) liegen."
+            errorDetail = ErrorDetail(message: msg)
+            showError = true
+            return false
+        }
+        currentPage = pageNumber - 1
+        updateStatus()
+        return true
+    }
+
     func setFirst() {
         startPage = currentPage
         updateStatus()
@@ -355,8 +478,7 @@ class PDFViewModel: ObservableObject {
         endPage = currentPage
         if endPage < startPage {
             let msg = "Endseite kann nicht vor der Startseite liegen!"
-            errorDetail = ErrorDetail(message: msg)
-            showError = true
+            presentError(message: msg)
             return
         }
         saveSplit()
@@ -411,19 +533,22 @@ class PDFViewModel: ObservableObject {
                 setFirst()
             } else {
                 let msg = "Letzte Seite erreicht."
-                errorDetail = ErrorDetail(message: msg)
-                showError = true
+                presentError(message: msg)
             }
         } else {
             let msg = "Fehler beim Speichern der Extraktion."
-            errorDetail = ErrorDetail(message: msg)
-            showError = true
+            presentError(message: msg)
         }
     }
 
     func updateStatus() {
         let titleInfo = currentTitle.isEmpty ? "" : " | Titel: \(currentTitle)"
         statusText = "Seite: \(currentPage + 1) / \(numPages) | Start: Seite \(startPage + 1)\(titleInfo)"
+    }
+
+    func presentError(message: String) {
+        errorDetail = ErrorDetail(message: message)
+        showError = true
     }
 
     // MARK: - Key Monitor

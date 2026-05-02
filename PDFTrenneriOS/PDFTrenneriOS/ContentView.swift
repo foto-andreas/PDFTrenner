@@ -15,8 +15,10 @@ class PDFViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showError = false
     @Published var showTitleSheet = false
+    @Published var showPageJumpSheet = false
     @Published var detectedTitle = ""
     @Published var currentTitle = ""
+    @Published var pageJumpInput = ""
     @Published var showFilePicker = false
 
     var pdfPath: String?
@@ -85,6 +87,22 @@ class PDFViewModel: ObservableObject {
         updateStatus()
     }
 
+    func jumpToPagePrompt() {
+        guard numPages > 0 else { return }
+        pageJumpInput = "\(currentPage + 1)"
+        showPageJumpSheet = true
+    }
+
+    func jumpToPage(_ pageNumber: Int) -> Bool {
+        guard pageNumber >= 1, pageNumber <= numPages else {
+            presentError(message: "Seitennummer muss zwischen 1 und \(numPages) liegen.")
+            return false
+        }
+        currentPage = pageNumber - 1
+        updateStatus()
+        return true
+    }
+
     func setFirst() {
         startPage = currentPage
         updateStatus()
@@ -96,7 +114,7 @@ class PDFViewModel: ObservableObject {
     func setLast() {
         endPage = currentPage
         if endPage < startPage {
-            showError(message: "Endseite kann nicht vor der Startseite liegen!")
+            presentError(message: "Endseite kann nicht vor der Startseite liegen!")
             return
         }
         saveSplit()
@@ -160,10 +178,10 @@ class PDFViewModel: ObservableObject {
                 updateStatus()
                 setFirst()
             } else {
-                showError(message: "Letzte Seite erreicht.")
+                presentError(message: "Letzte Seite erreicht.")
             }
         } else {
-            showError(message: "Fehler beim Speichern der Extraktion.")
+            presentError(message: "Fehler beim Speichern der Extraktion.")
         }
     }
 
@@ -172,7 +190,7 @@ class PDFViewModel: ObservableObject {
         statusText = "Seite \(currentPage + 1)/\(numPages) | Start: \(startPage + 1)\(titleInfo)"
     }
 
-    private func showError(message: String) {
+    func presentError(message: String) {
         errorMessage = message
         showError = true
     }
@@ -214,6 +232,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $vm.showTitleSheet) {
             TitleSheetView(vm: vm)
+        }
+        .sheet(isPresented: $vm.showPageJumpSheet) {
+            PageJumpSheetView(vm: vm)
         }
         .alert("Fehler", isPresented: $vm.showError) {
             Button("OK", role: .cancel) { vm.errorMessage = nil }
@@ -339,6 +360,15 @@ struct ContentView: View {
             .buttonStyle(.borderedProminent)
             .fixedSize(horizontal: true, vertical: false)
 
+            Button { vm.jumpToPagePrompt() } label: {
+                Label("Seite", systemImage: "number")
+                    .font(.system(size: isPadLayout ? 15 : 16, weight: .semibold))
+                    .lineLimit(1)
+                    .frame(minWidth: 128)
+            }
+            .buttonStyle(.bordered)
+            .fixedSize(horizontal: true, vertical: false)
+
             Button { vm.setLast() } label: {
                 Label("Ende", systemImage: "scissors")
                     .font(.system(size: isPadLayout ? 15 : 16, weight: .semibold))
@@ -401,6 +431,75 @@ struct TitleSheetView: View {
         }
         .navigationViewStyle(.stack)
         .presentationDetents([.medium, .large])
+    }
+}
+
+// MARK: - Page Jump Sheet
+struct PageJumpSheetView: View {
+    @ObservedObject var vm: PDFViewModel
+    @FocusState private var isTextFieldFocused: Bool
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var isPadLayout: Bool {
+        horizontalSizeClass == .regular
+    }
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 16) {
+                Text("Zu Seite springen")
+                    .font(.system(size: isPadLayout ? 18 : 19, weight: .semibold))
+                    .multilineTextAlignment(.center)
+
+                TextField("Seitennummer", text: $vm.pageJumpInput)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: isPadLayout ? 18 : 20))
+                    .keyboardType(.numberPad)
+                    .focused($isTextFieldFocused)
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            isTextFieldFocused = true
+                        }
+                    }
+                    .submitLabel(.go)
+                    .onSubmit {
+                        if let page = Int(vm.pageJumpInput.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                            if vm.jumpToPage(page) {
+                                vm.showPageJumpSheet = false
+                            }
+                        } else {
+                            vm.presentError(message: "Bitte eine gültige Seitennummer eingeben.")
+                        }
+                    }
+
+                HStack(spacing: 20) {
+                    Button("Abbrechen") {
+                        vm.showPageJumpSheet = false
+                    }
+                    .font(.system(size: isPadLayout ? 15 : 16, weight: .medium))
+
+                    Button("Springen") {
+                        let trimmed = vm.pageJumpInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if let page = Int(trimmed) {
+                            if vm.jumpToPage(page) {
+                                vm.showPageJumpSheet = false
+                            }
+                        } else {
+                            vm.presentError(message: "Bitte eine gültige Seitennummer eingeben.")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .font(.system(size: isPadLayout ? 15 : 16, weight: .semibold))
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 28)
+            .padding(.vertical, 24)
+            .navigationTitle("Seite springen")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .navigationViewStyle(.stack)
+        .presentationDetents([.medium])
     }
 }
 

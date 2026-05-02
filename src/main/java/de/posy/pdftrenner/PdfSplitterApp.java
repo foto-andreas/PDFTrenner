@@ -232,11 +232,15 @@ public class PdfSplitterApp extends Application {
         firstPageBtn.setTooltip(new Tooltip("Startseite + Titel festlegen (Taste: F)"));
         firstPageBtn.setOnAction(e -> setFirst());
 
+        Button pageJumpBtn = new Button("Seite");
+        pageJumpBtn.setTooltip(new Tooltip("Zu einer bestimmten Seite springen"));
+        pageJumpBtn.setOnAction(e -> showPageJumpDialog());
+
         Button lastPageBtn = new Button("Ende (L)");
         lastPageBtn.setTooltip(new Tooltip("Endseite setzen + Speichern (Taste: L)"));
         lastPageBtn.setOnAction(e -> setLast());
 
-        HBox buttonBox = new HBox(10, firstPageBtn, lastPageBtn);
+        HBox buttonBox = new HBox(10, firstPageBtn, pageJumpBtn, lastPageBtn);
         buttonBox.setAlignment(Pos.CENTER);
         buttonBox.setStyle("-fx-padding: 8; -fx-background-color: #f0f0f0;");
 
@@ -343,6 +347,35 @@ public class PdfSplitterApp extends Application {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void showPageJumpDialog() {
+        if (numPages <= 0) return;
+
+        TextInputDialog dialog = new TextInputDialog(String.valueOf(currentPage + 1));
+        dialog.initOwner(primaryStage);
+        dialog.setTitle("Seite springen");
+        dialog.setHeaderText("Zu einer Seite im PDF springen");
+        dialog.setContentText("Seitennummer (1-" + numPages + "):");
+
+        Optional<String> result = dialog.showAndWait();
+        result.ifPresent(value -> {
+            try {
+                int pageNumber = Integer.parseInt(value.trim());
+                goToPage(pageNumber - 1);
+            } catch (NumberFormatException ex) {
+                showError("Bitte eine gültige Seitennummer eingeben.");
+            }
+        });
+    }
+
+    private void goToPage(int pageIndex) {
+        if (pageIndex < 0 || pageIndex >= numPages) {
+            showError("Seitennummer muss zwischen 1 und " + numPages + " liegen.");
+            return;
+        }
+        currentPage = pageIndex;
+        showPage();
     }
 
     private void updateStatus() {

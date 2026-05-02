@@ -43,6 +43,7 @@ open PDFTrenner.app --args /Pfad/zur/Datei.pdf
 | **Statusleiste** | Zeigt: Seitennummer, Startseite, aktueller Titel |
 | **◀ / ▶** | Vorherige/nächste Seite |
 | **Start (F)** | Startseite festlegen und Titeleingabe öffnen |
+| **Seite** | Dialog für direkte Seitennummer öffnen |
 | **Ende (L)** | Endseite festlegen und Speichern auslösen |
 
 ### Titeleingabe
@@ -59,6 +60,7 @@ Wird automatisch geöffnet, wenn die Startseite gesetzt wird (Taste `F`). Das Ei
 ![Workflow-Diagramm](workflow.svg)
 
 **F** = Startseite setzen → Titeleingabe  
+**Seite** = direkte Seitennummer eingeben → zur Seite springen  
 **L** = Endseite setzen → sofort speichern
 
 Nach dem Speichern wird automatisch die nächste Seite als neue Startseite vorgeschlagen und die Titeleingabe geöffnet. So kann ein komplettes PDF in einem Durchlauf aufgeteilt werden.
@@ -100,6 +102,7 @@ Sonderzeichen, die keine Buchstaben/Zahlen sind, werden entfernt. Wenn der Titel
 | `←` | Vorherige Seite |
 | `→` | Nächste Seite |
 | `F` | Startseite setzen + Titeleingabe |
+| `Seite` | Button: Seitennummer eingeben und zur gewählten Seite springen |
 | `L` | Endseite setzen + Speichern |
 | `Enter` | Titel bestätigen (im Eingabefeld) |
 | `Esc` | Titeleingabe abbrechen |

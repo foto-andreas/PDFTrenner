@@ -42,6 +42,7 @@ Zentrale Zustandsverwaltung:
 | `statusText` | `String` | Statuszeilen-Anzeige |
 | `isLoading` | `Bool` | Splash-Screen aktiv |
 | `showSaveDialog` | `Bool` | Titeleingabe-Panel sichtbar |
+| `showPageJumpPanel` | `Bool` | Seitensprung-Panel sichtbar |
 | `detectedTitle` | `String` | OCR-Ergebnis |
 | `currentTitle` | `String` | Durch den Benutzer bestätigter Titel |
 | `errorMessage` | `String?` | Fehlertext |
@@ -56,11 +57,13 @@ Zentrale Zustandsverwaltung:
 | `openFileChooser()` | `NSOpenPanel` für PDF-Dateien |
 | `loadPDF(at:)` | PDF laden, State wiederherstellen |
 | `setFirst()` | Startseite = aktuelle Seite, OCR starten, Titeleingabe öffnen |
+| `showPageJumpDialog()` | Seitensprung-Panel öffnen |
+| `jumpToPage(_:)` | Auf eine 1-basierte Seitennummer springen |
 | `setLast()` | Endseite = aktuelle Seite, `saveSplit()` aufrufen |
 | `saveSplit()` | Seiten extrahieren, speichern, nächste Startseite |
 | `runOCR()` | Asynchrone OCR im Hintergrund-Thread |
 
-**Key-Monitor**: Lokaler `NSEvent.addLocalMonitorForEvents(.keyDown)` fängt Pfeiltasten sowie `F` und `L` ab. Während die Titeleingabe aktiv ist, werden Tastenkürzel blockiert.
+**Key-Monitor**: Lokaler `NSEvent.addLocalMonitorForEvents(.keyDown)` fängt Pfeiltasten sowie `F` und `L` ab. Während die Titeleingabe aktiv ist, werden Tastenkürzel blockiert. Der Seitensprung läuft separat über ein eigenes Panel und validiert die Eingabe gegen `numPages`.
 
 #### TitlePanelController (`NSObject`, `NSTextFieldDelegate`)
 
@@ -76,6 +79,7 @@ Erbt von `NSObject`, da `@objc` in Swift-Structs nicht möglich ist.
 
 - Drei Zustände: Splash → Fehler → PDF-Ansicht
 - Reagiert auf `$showSaveDialog` (`.onReceive`) → Panel öffnen/schließen
+- Reagiert auf `$showPageJumpPanel` (`.onReceive`) → Seitensprung-Panel öffnen/schließen
 - Reagiert auf `$detectedTitle` → Textfeld aktualisieren
 - Fehler-Alert über `.alert(isPresented:)`
 
@@ -180,6 +184,7 @@ Alle Fehler werden über `@Published var showError: Bool` und `.alert(isPresente
 | Mindestsystem | macOS 12 Monterey |
 | Architektur | Universal Binary (arm64 + x86_64) |
 | Titeleingabe | `NSPanel` mit `.utilityWindow` + `.floating`, positioniert rechts neben dem Hauptfenster |
+| Seitensprung | Eigenes `NSPanel` mit Seitennummer-Eingabe und Validierung |
 | Dateiauswahl | `NSOpenPanel` mit PDF-Filter |
 | Tastaturkürzel | `NSEvent.addLocalMonitorForEvents(.keyDown)` — F, L, Pfeiltasten |
 | Fenster Ende | `applicationShouldTerminateAfterLastWindowClosed → true` |
@@ -191,6 +196,7 @@ Alle Fehler werden über `@Published var showError: Bool` und `.alert(isPresente
 | Mindestsystem | iOS 16 |
 | Zielgeräte | iPhone + iPad |
 | Titeleingabe | SwiftUI `.sheet` mit `.presentationDetents([.medium])` |
+| Seitensprung | SwiftUI `.sheet` mit Eingabefeld, ausgelöst durch den Button `Seite` |
 | Dateiauswahl | `UIDocumentPickerViewController` mit PDF-UTI |
 | OCR | Gleiches `Vision`-Framework |
 | Tastatur | Keine globalen Shortcuts — Buttons in der UI |
@@ -210,6 +216,7 @@ Keine Konfigurationsdatei. Alle Einstellungen sind im Quellcode festgelegt:
 | Dateiname-Umlaut-Konvertierung | ä→ae, ö→oe, ü→ue, ß→ss, dann `[^a-zA-Z0-9 _-]` entfernen | ContentView.swift |
 | Fallback-Dateiname | `Song_Seite_N` | ContentView.swift |
 | Panel-Lücke | 6px rechts neben Hauptfenster | ContentView.swift (macOS) |
+| Seitensprung-Eingabe | 1-basierte Seitennummer, gültig von 1 bis `numPages` | ContentView.swift |
 
 ## Abhängigkeiten
 

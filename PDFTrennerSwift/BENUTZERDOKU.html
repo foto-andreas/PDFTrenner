@@ -12,12 +12,10 @@ tr:nth-child(even) { background-color: #fafafa; }
 code { background-color: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: "SF Mono","Menlo","Monaco",monospace; font-size: 13px; }
 pre { background-color: #f4f4f4; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
 pre code { background: none; padding: 0; }
-img { max-width: 100%; height: auto; display: block; margin: 16px auto; border: 1px solid #e0e0e0; border-radius: 4px; }
 strong, b { color: #1a1a1a; }
 p { margin: 6px 0; }
 ul, ol { margin: 4px 0; padding-left: 20px; }
 li { margin: 3px 0; }
-@media print { body { max-width: 100%; padding: 0; } h2 { page-break-after: avoid; } h3 { page-break-after: avoid; } }
 </style></head><body><h1>PDFTrenner Swift — Benutzerdokumentation</h1>
 <h2>Übersicht</h2>
 <p>PDFTrenner ist eine Anwendung zum interaktiven Durchblättern und Aufteilen von PDF-Dateien. Die Swift-Variante läuft nativ auf macOS (ab Monterey 12.0) als Universal Binary (ARM + Intel).</p>
@@ -69,6 +67,10 @@ swift build -c release          # aktuelle Architektur
 <td>Startseite festlegen und Titeleingabe öffnen</td>
 </tr>
 <tr>
+<td><strong>Seite</strong></td>
+<td>Dialog für direkte Seitennummer öffnen</td>
+</tr>
+<tr>
 <td><strong>Ende (L)</strong></td>
 <td>Endseite festlegen und Speichern auslösen</td>
 </tr>
@@ -83,106 +85,9 @@ swift build -c release          # aktuelle Architektur
 <li><strong>Abbrechen</strong> oder <strong>Esc</strong> → Titel leeren</li>
 </ul>
 <h3>Workflow</h3>
-<div style="max-width:600px;margin:16px auto;border:1px solid #e0e0e0;border-radius:4px;overflow:hidden">
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 870" width="100%" font-family="-apple-system,Helvetica Neue,Helvetica,Arial,sans-serif">
-
-<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker>
-
-<!-- A: PDF öffnen -->
-<rect x="165" y="10" width="220" height="50" rx="8" fill="#4a9eff" stroke="#2d7dd2" stroke-width="1.5"/>
-<text x="275" y="41" text-anchor="middle" fill="white" font-size="15" font-weight="bold">PDF öffnen</text>
-<line x1="275" y1="60" x2="275" y2="78" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
-
-<!-- B: PDF laden &amp; anzeigen -->
-<rect x="165" y="78" width="220" height="44" rx="8" fill="#f0f3f7" stroke="#adb5bd" stroke-width="1.5"/>
-<text x="275" y="105" text-anchor="middle" fill="#222" font-size="13">PDF laden &amp; anzeigen</text>
-<line x1="275" y1="122" x2="275" y2="140" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
-
-<!-- C: Blättern -->
-<rect x="165" y="140" width="220" height="44" rx="8" fill="#f0f3f7" stroke="#adb5bd" stroke-width="1.5"/>
-<text x="275" y="167" text-anchor="middle" fill="#222" font-size="13">Blättern ◀ / ▶</text>
-<line x1="275" y1="184" x2="275" y2="210" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
-
-<!-- D: Taste/Button (diamond) -->
-<polygon points="275,210 350,258 275,306 200,258" fill="#fff8e1" stroke="#c99700" stroke-width="1.5"/>
-<text x="275" y="255" text-anchor="middle" fill="#5a4800" font-size="12">Taste /</text>
-<text x="275" y="270" text-anchor="middle" fill="#5a4800" font-size="12">Button</text>
-
-<!-- ← zurück zu C -->
-<polyline points="200,258 115,258 115,162 165,162" fill="none" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
-<text x="105" y="215" text-anchor="end" fill="#555" font-size="11">◀ / ▶</text>
-
-<!-- F → runter zu E -->
-<polyline points="350,258 400,258 400,310 385,310" fill="none" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
-<text x="408" y="285" text-anchor="start" fill="#555" font-size="11">F</text>
-
-<!-- E: Startseite festlegen -->
-<rect x="165" y="310" width="220" height="44" rx="8" fill="#f0f3f7" stroke="#adb5bd" stroke-width="1.5"/>
-<text x="275" y="337" text-anchor="middle" fill="#222" font-size="13">Startseite festlegen</text>
-<line x1="275" y1="354" x2="275" y2="372" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
-
-<!-- F: Titeleingabe -->
-<rect x="165" y="372" width="220" height="55" rx="8" fill="#ff6b6b" stroke="#e05555" stroke-width="1.5"/>
-<text x="275" y="397" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Titeleingabe</text>
-<text x="275" y="415" text-anchor="middle" fill="white" font-size="11">(OCR-Vorschlag)</text>
-
-<!-- Abbrechen: zurück zu C -->
-<polyline points="385,399 510,399 510,162 385,162" fill="none" stroke="#999" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arr)"/>
-<text x="520" y="285" text-anchor="start" fill="#999" font-size="11">Abbrechen</text>
-
-<!-- OK -->
-<line x1="275" y1="427" x2="275" y2="450" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
-<text x="287" y="443" text-anchor="start" fill="#555" font-size="11">OK</text>
-
-<!-- G: Zur Endseite blättern -->
-<rect x="165" y="450" width="220" height="44" rx="8" fill="#f0f3f7" stroke="#adb5bd" stroke-width="1.5"/>
-<text x="275" y="477" text-anchor="middle" fill="#222" font-size="13">Zur Endseite blättern</text>
-<line x1="275" y1="494" x2="275" y2="512" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
-<text x="287" y="508" text-anchor="start" fill="#555" font-size="11">L</text>
-
-<!-- H: Endseite festlegen -->
-<rect x="165" y="512" width="220" height="44" rx="8" fill="#f0f3f7" stroke="#adb5bd" stroke-width="1.5"/>
-<text x="275" y="539" text-anchor="middle" fill="#222" font-size="13">Endseite festlegen</text>
-<line x1="275" y1="556" x2="275" y2="574" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
-
-<!-- I: Abschnitt speichern -->
-<rect x="165" y="574" width="220" height="44" rx="8" fill="#f0f3f7" stroke="#adb5bd" stroke-width="1.5"/>
-<text x="275" y="601" text-anchor="middle" fill="#222" font-size="13">Abschnitt speichern</text>
-
-<!-- 3 Äste von I -->
-<line x1="210" y1="618" x2="110" y2="658" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
-<line x1="275" y1="618" x2="275" y2="658" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
-<line x1="340" y1="618" x2="460" y2="658" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
-
-<!-- J: PDF-Datei -->
-<rect x="20" y="658" width="180" height="50" rx="8" fill="#2ed573" stroke="#20c05a" stroke-width="1.5"/>
-<text x="110" y="679" text-anchor="middle" fill="white" font-size="12" font-weight="bold">PDF-Datei im</text>
-<text x="110" y="696" text-anchor="middle" fill="white" font-size="12" font-weight="bold">Ordner Manual_Splits</text>
-
-<!-- K: Fortschritt merken -->
-<rect x="200" y="658" width="150" height="44" rx="8" fill="#f0f3f7" stroke="#adb5bd" stroke-width="1.5"/>
-<text x="275" y="685" text-anchor="middle" fill="#222" font-size="12">Fortschritt merken</text>
-
-<!-- L: Noch Seiten? (diamond) -->
-<polygon points="490,658 555,700 490,742 425,700" fill="#fff8e1" stroke="#c99700" stroke-width="1.5"/>
-<text x="490" y="697" text-anchor="middle" fill="#5a4800" font-size="11">Noch Seiten</text>
-<text x="490" y="711" text-anchor="middle" fill="#5a4800" font-size="11">übrig?</text>
-
-<!-- Ja: zurück zu E (dashed) -->
-<polyline points="555,700 570,700 570,332 385,332" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arr)"/>
-<text x="578" y="520" text-anchor="start" fill="#555" font-size="12" font-weight="bold">Ja</text>
-
-<!-- Nein: runter zu M -->
-<line x1="490" y1="742" x2="490" y2="780" stroke="#555" stroke-width="2" marker-end="url(#arr)"/>
-<text x="502" y="768" text-anchor="start" fill="#555" font-size="11">Nein</text>
-
-<!-- M: Fertig -->
-<rect x="380" y="780" width="220" height="50" rx="8" fill="#ffa502" stroke="#e09002" stroke-width="1.5"/>
-<text x="490" y="810" text-anchor="middle" fill="white" font-size="15" font-weight="bold">Fertig</text>
-
-</svg>
-</div>
+<p><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2MDAgODcwIiB3aWR0aD0iNjAwIiBoZWlnaHQ9Ijg3MCIgZm9udC1mYW1pbHk9Ii1hcHBsZS1zeXN0ZW0sSGVsdmV0aWNhIE5ldWUsSGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWYiPgoKPG1hcmtlciBpZD0iYXJyIiB2aWV3Qm94PSIwIDAgMTAgMTAiIHJlZlg9IjkiIHJlZlk9IjUiIG1hcmtlcldpZHRoPSI3IiBtYXJrZXJIZWlnaHQ9IjciIG9yaWVudD0iYXV0byI+PHBhdGggZD0iTTAsMCBMMTAsNSBMMCwxMCB6IiBmaWxsPSIjNTU1Ii8+PC9tYXJrZXI+Cgo8IS0tIEE6IFBERiDDtmZmbmVuIC0tPgo8cmVjdCB4PSIxNjUiIHk9IjEwIiB3aWR0aD0iMjIwIiBoZWlnaHQ9IjUwIiByeD0iOCIgZmlsbD0iIzRhOWVmZiIgc3Ryb2tlPSIjMmQ3ZGQyIiBzdHJva2Utd2lkdGg9IjEuNSIvPgo8dGV4dCB4PSIyNzUiIHk9IjQxIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSIxNSIgZm9udC13ZWlnaHQ9ImJvbGQiPlBERiDDtmZmbmVuPC90ZXh0Pgo8bGluZSB4MT0iMjc1IiB5MT0iNjAiIHgyPSIyNzUiIHkyPSI3OCIgc3Ryb2tlPSIjNTU1IiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYXJyKSIvPgoKPCEtLSBCOiBQREYgbGFkZW4gJiBhbnplaWdlbiAtLT4KPHJlY3QgeD0iMTY1IiB5PSI3OCIgd2lkdGg9IjIyMCIgaGVpZ2h0PSI0NCIgcng9IjgiIGZpbGw9IiNmMGYzZjciIHN0cm9rZT0iI2FkYjViZCIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KPHRleHQgeD0iMjc1IiB5PSIxMDUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiMyMjIiIGZvbnQtc2l6ZT0iMTMiPlBERiBsYWRlbiAmYW1wOyBhbnplaWdlbjwvdGV4dD4KPGxpbmUgeDE9IjI3NSIgeTE9IjEyMiIgeDI9IjI3NSIgeTI9IjE0MCIgc3Ryb2tlPSIjNTU1IiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYXJyKSIvPgoKPCEtLSBDOiBCbMOkdHRlcm4gLS0+CjxyZWN0IHg9IjE2NSIgeT0iMTQwIiB3aWR0aD0iMjIwIiBoZWlnaHQ9IjQ0IiByeD0iOCIgZmlsbD0iI2YwZjNmNyIgc3Ryb2tlPSIjYWRiNWJkIiBzdHJva2Utd2lkdGg9IjEuNSIvPgo8dGV4dCB4PSIyNzUiIHk9IjE2NyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzIyMiIgZm9udC1zaXplPSIxMyI+QmzDpHR0ZXJuIOKXgCAvIOKWtjwvdGV4dD4KPGxpbmUgeDE9IjI3NSIgeTE9IjE4NCIgeDI9IjI3NSIgeTI9IjIxMCIgc3Ryb2tlPSIjNTU1IiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYXJyKSIvPgoKPCEtLSBEOiBUYXN0ZS9CdXR0b24gKGRpYW1vbmQpIC0tPgo8cG9seWdvbiBwb2ludHM9IjI3NSwyMTAgMzUwLDI1OCAyNzUsMzA2IDIwMCwyNTgiIGZpbGw9IiNmZmY4ZTEiIHN0cm9rZT0iI2M5OTcwMCIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KPHRleHQgeD0iMjc1IiB5PSIyNTUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM1YTQ4MDAiIGZvbnQtc2l6ZT0iMTIiPlRhc3RlIC88L3RleHQ+Cjx0ZXh0IHg9IjI3NSIgeT0iMjcwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNWE0ODAwIiBmb250LXNpemU9IjEyIj5CdXR0b248L3RleHQ+Cgo8IS0tIOKGkCB6dXLDvGNrIHp1IEMgLS0+Cjxwb2x5bGluZSBwb2ludHM9IjIwMCwyNTggMTE1LDI1OCAxMTUsMTYyIDE2NSwxNjIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzU1NSIgc3Ryb2tlLXdpZHRoPSIyIiBtYXJrZXItZW5kPSJ1cmwoI2FycikiLz4KPHRleHQgeD0iMTA1IiB5PSIyMTUiIHRleHQtYW5jaG9yPSJlbmQiIGZpbGw9IiM1NTUiIGZvbnQtc2l6ZT0iMTEiPuKXgCAvIOKWtjwvdGV4dD4KCjwhLS0gRiDihpIgcnVudGVyIHp1IEUgLS0+Cjxwb2x5bGluZSBwb2ludHM9IjM1MCwyNTggNDAwLDI1OCA0MDAsMzEwIDM4NSwzMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzU1NSIgc3Ryb2tlLXdpZHRoPSIyIiBtYXJrZXItZW5kPSJ1cmwoI2FycikiLz4KPHRleHQgeD0iNDA4IiB5PSIyODUiIHRleHQtYW5jaG9yPSJzdGFydCIgZmlsbD0iIzU1NSIgZm9udC1zaXplPSIxMSI+RjwvdGV4dD4KCjwhLS0gRTogU3RhcnRzZWl0ZSBmZXN0bGVnZW4gLS0+CjxyZWN0IHg9IjE2NSIgeT0iMzEwIiB3aWR0aD0iMjIwIiBoZWlnaHQ9IjQ0IiByeD0iOCIgZmlsbD0iI2YwZjNmNyIgc3Ryb2tlPSIjYWRiNWJkIiBzdHJva2Utd2lkdGg9IjEuNSIvPgo8dGV4dCB4PSIyNzUiIHk9IjMzNyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzIyMiIgZm9udC1zaXplPSIxMyI+U3RhcnRzZWl0ZSBmZXN0bGVnZW48L3RleHQ+CjxsaW5lIHgxPSIyNzUiIHkxPSIzNTQiIHgyPSIyNzUiIHkyPSIzNzIiIHN0cm9rZT0iIzU1NSIgc3Ryb2tlLXdpZHRoPSIyIiBtYXJrZXItZW5kPSJ1cmwoI2FycikiLz4KCjwhLS0gRjogVGl0ZWxlaW5nYWJlIC0tPgo8cmVjdCB4PSIxNjUiIHk9IjM3MiIgd2lkdGg9IjIyMCIgaGVpZ2h0PSI1NSIgcng9IjgiIGZpbGw9IiNmZjZiNmIiIHN0cm9rZT0iI2UwNTU1NSIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KPHRleHQgeD0iMjc1IiB5PSIzOTciIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCI+VGl0ZWxlaW5nYWJlPC90ZXh0Pgo8dGV4dCB4PSIyNzUiIHk9IjQxNSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiIGZvbnQtc2l6ZT0iMTEiPihPQ1ItVm9yc2NobGFnKTwvdGV4dD4KCjwhLS0gQWJicmVjaGVuOiB6dXLDvGNrIHp1IEMgLS0+Cjxwb2x5bGluZSBwb2ludHM9IjM4NSwzOTkgNTEwLDM5OSA1MTAsMTYyIDM4NSwxNjIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzk5OSIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1kYXNoYXJyYXk9IjYsMyIgbWFya2VyLWVuZD0idXJsKCNhcnIpIi8+Cjx0ZXh0IHg9IjUyMCIgeT0iMjg1IiB0ZXh0LWFuY2hvcj0ic3RhcnQiIGZpbGw9IiM5OTkiIGZvbnQtc2l6ZT0iMTEiPkFiYnJlY2hlbjwvdGV4dD4KCjwhLS0gT0sgLS0+CjxsaW5lIHgxPSIyNzUiIHkxPSI0MjciIHgyPSIyNzUiIHkyPSI0NTAiIHN0cm9rZT0iIzU1NSIgc3Ryb2tlLXdpZHRoPSIyIiBtYXJrZXItZW5kPSJ1cmwoI2FycikiLz4KPHRleHQgeD0iMjg3IiB5PSI0NDMiIHRleHQtYW5jaG9yPSJzdGFydCIgZmlsbD0iIzU1NSIgZm9udC1zaXplPSIxMSI+T0s8L3RleHQ+Cgo8IS0tIEc6IFp1ciBFbmRzZWl0ZSBibMOkdHRlcm4gLS0+CjxyZWN0IHg9IjE2NSIgeT0iNDUwIiB3aWR0aD0iMjIwIiBoZWlnaHQ9IjQ0IiByeD0iOCIgZmlsbD0iI2YwZjNmNyIgc3Ryb2tlPSIjYWRiNWJkIiBzdHJva2Utd2lkdGg9IjEuNSIvPgo8dGV4dCB4PSIyNzUiIHk9IjQ3NyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzIyMiIgZm9udC1zaXplPSIxMyI+WnVyIEVuZHNlaXRlIGJsw6R0dGVybjwvdGV4dD4KPGxpbmUgeDE9IjI3NSIgeTE9IjQ5NCIgeDI9IjI3NSIgeTI9IjUxMiIgc3Ryb2tlPSIjNTU1IiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYXJyKSIvPgo8dGV4dCB4PSIyODciIHk9IjUwOCIgdGV4dC1hbmNob3I9InN0YXJ0IiBmaWxsPSIjNTU1IiBmb250LXNpemU9IjExIj5MPC90ZXh0PgoKPCEtLSBIOiBFbmRzZWl0ZSBmZXN0bGVnZW4gLS0+CjxyZWN0IHg9IjE2NSIgeT0iNTEyIiB3aWR0aD0iMjIwIiBoZWlnaHQ9IjQ0IiByeD0iOCIgZmlsbD0iI2YwZjNmNyIgc3Ryb2tlPSIjYWRiNWJkIiBzdHJva2Utd2lkdGg9IjEuNSIvPgo8dGV4dCB4PSIyNzUiIHk9IjUzOSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzIyMiIgZm9udC1zaXplPSIxMyI+RW5kc2VpdGUgZmVzdGxlZ2VuPC90ZXh0Pgo8bGluZSB4MT0iMjc1IiB5MT0iNTU2IiB4Mj0iMjc1IiB5Mj0iNTc0IiBzdHJva2U9IiM1NTUiIHN0cm9rZS13aWR0aD0iMiIgbWFya2VyLWVuZD0idXJsKCNhcnIpIi8+Cgo8IS0tIEk6IEFic2Nobml0dCBzcGVpY2hlcm4gLS0+CjxyZWN0IHg9IjE2NSIgeT0iNTc0IiB3aWR0aD0iMjIwIiBoZWlnaHQ9IjQ0IiByeD0iOCIgZmlsbD0iI2YwZjNmNyIgc3Ryb2tlPSIjYWRiNWJkIiBzdHJva2Utd2lkdGg9IjEuNSIvPgo8dGV4dCB4PSIyNzUiIHk9IjYwMSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzIyMiIgZm9udC1zaXplPSIxMyI+QWJzY2huaXR0IHNwZWljaGVybjwvdGV4dD4KCjwhLS0gMyDDhHN0ZSB2b24gSSAtLT4KPGxpbmUgeDE9IjIxMCIgeTE9IjYxOCIgeDI9IjExMCIgeTI9IjY1OCIgc3Ryb2tlPSIjNTU1IiBzdHJva2Utd2lkdGg9IjIiIG1hcmtlci1lbmQ9InVybCgjYXJyKSIvPgo8bGluZSB4MT0iMjc1IiB5MT0iNjE4IiB4Mj0iMjc1IiB5Mj0iNjU4IiBzdHJva2U9IiM1NTUiIHN0cm9rZS13aWR0aD0iMiIgbWFya2VyLWVuZD0idXJsKCNhcnIpIi8+CjxsaW5lIHgxPSIzNDAiIHkxPSI2MTgiIHgyPSI0NjAiIHkyPSI2NTgiIHN0cm9rZT0iIzU1NSIgc3Ryb2tlLXdpZHRoPSIyIiBtYXJrZXItZW5kPSJ1cmwoI2FycikiLz4KCjwhLS0gSjogUERGLURhdGVpIC0tPgo8cmVjdCB4PSIyMCIgeT0iNjU4IiB3aWR0aD0iMTgwIiBoZWlnaHQ9IjUwIiByeD0iOCIgZmlsbD0iIzJlZDU3MyIgc3Ryb2tlPSIjMjBjMDVhIiBzdHJva2Utd2lkdGg9IjEuNSIvPgo8dGV4dCB4PSIxMTAiIHk9IjY3OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIj5QREYtRGF0ZWkgaW08L3RleHQ+Cjx0ZXh0IHg9IjExMCIgeT0iNjk2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSIxMiIgZm9udC13ZWlnaHQ9ImJvbGQiPk9yZG5lciBNYW51YWxfU3BsaXRzPC90ZXh0PgoKPCEtLSBLOiBGb3J0c2Nocml0dCBtZXJrZW4gLS0+CjxyZWN0IHg9IjIwMCIgeT0iNjU4IiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjQ0IiByeD0iOCIgZmlsbD0iI2YwZjNmNyIgc3Ryb2tlPSIjYWRiNWJkIiBzdHJva2Utd2lkdGg9IjEuNSIvPgo8dGV4dCB4PSIyNzUiIHk9IjY4NSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzIyMiIgZm9udC1zaXplPSIxMiI+Rm9ydHNjaHJpdHQgbWVya2VuPC90ZXh0PgoKPCEtLSBMOiBOb2NoIFNlaXRlbj8gKGRpYW1vbmQpIC0tPgo8cG9seWdvbiBwb2ludHM9IjQ5MCw2NTggNTU1LDcwMCA0OTAsNzQyIDQyNSw3MDAiIGZpbGw9IiNmZmY4ZTEiIHN0cm9rZT0iI2M5OTcwMCIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KPHRleHQgeD0iNDkwIiB5PSI2OTciIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM1YTQ4MDAiIGZvbnQtc2l6ZT0iMTEiPk5vY2ggU2VpdGVuPC90ZXh0Pgo8dGV4dCB4PSI0OTAiIHk9IjcxMSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzVhNDgwMCIgZm9udC1zaXplPSIxMSI+w7xicmlnPzwvdGV4dD4KCjwhLS0gSmE6IHp1csO8Y2sgenUgRSAoZGFzaGVkKSAtLT4KPHBvbHlsaW5lIHBvaW50cz0iNTU1LDcwMCA1NzAsNzAwIDU3MCwzMzIgMzg1LDMzMiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNTU1IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1kYXNoYXJyYXk9IjYsMyIgbWFya2VyLWVuZD0idXJsKCNhcnIpIi8+Cjx0ZXh0IHg9IjU3OCIgeT0iNTIwIiB0ZXh0LWFuY2hvcj0ic3RhcnQiIGZpbGw9IiM1NTUiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIj5KYTwvdGV4dD4KCjwhLS0gTmVpbjogcnVudGVyIHp1IE0gLS0+CjxsaW5lIHgxPSI0OTAiIHkxPSI3NDIiIHgyPSI0OTAiIHkyPSI3ODAiIHN0cm9rZT0iIzU1NSIgc3Ryb2tlLXdpZHRoPSIyIiBtYXJrZXItZW5kPSJ1cmwoI2FycikiLz4KPHRleHQgeD0iNTAyIiB5PSI3NjgiIHRleHQtYW5jaG9yPSJzdGFydCIgZmlsbD0iIzU1NSIgZm9udC1zaXplPSIxMSI+TmVpbjwvdGV4dD4KCjwhLS0gTTogRmVydGlnIC0tPgo8cmVjdCB4PSIzODAiIHk9Ijc4MCIgd2lkdGg9IjIyMCIgaGVpZ2h0PSI1MCIgcng9IjgiIGZpbGw9IiNmZmE1MDIiIHN0cm9rZT0iI2UwOTAwMiIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KPHRleHQgeD0iNDkwIiB5PSI4MTAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjE1IiBmb250LXdlaWdodD0iYm9sZCI+RmVydGlnPC90ZXh0PgoKPC9zdmc+" alt="Workflow-Diagramm" style="max-width:100%;height:auto;display:block;margin:16px auto;border:1px solid #e0e0e0;border-radius:4px;"></p>
 <p><strong>F</strong> = Startseite setzen → Titeleingabe<br />
+<strong>Seite</strong> = direkte Seitennummer eingeben → zur Seite springen<br />
 <strong>L</strong> = Endseite setzen → sofort speichern</p>
 <p>Nach dem Speichern wird automatisch die nächste Seite als neue Startseite vorgeschlagen und die Titeleingabe geöffnet. So kann ein komplettes PDF in einem Durchlauf aufgeteilt werden.</p>
 <h2>Zustandsspeicherung</h2>
@@ -246,6 +151,10 @@ swift build -c release          # aktuelle Architektur
 <tr>
 <td><code>F</code></td>
 <td>Startseite setzen + Titeleingabe</td>
+</tr>
+<tr>
+<td><code>Seite</code></td>
+<td>Button: Seitennummer eingeben und zur gewählten Seite springen</td>
 </tr>
 <tr>
 <td><code>L</code></td>

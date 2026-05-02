@@ -63,6 +63,7 @@ gradlew.bat run --args="DATEI.pdf"
 |-------|--------|
 | `←` / `→` | Seite zurueck / vor |
 | `F` | Startseite setzen — öffnet Titeleingabe-Dialog (Titel wird per OCR vorausgefüllt) |
+| `Seite` | Seitennummer eingeben und direkt zur Seite springen |
 | `L` | Endseite setzen und Abschnitt sofort speichern |
 
 Die extrahierten PDFs landen im Unterordner `Manual_Splits/` neben der
@@ -254,6 +255,7 @@ PDFTrenneriOS/
 | Titeleingabe | NSPanel (.floating) rechts neben Fenster | SwiftUI .sheet (.medium detent) |
 | Dateiauswahl | NSOpenPanel | UIDocumentPickerViewController |
 | Tastaturkuerzel | F, L, Pfeiltasten | Buttons in der UI |
+| Seitensprung | Button `Seite` mit Eingabedialog | Button `Seite` mit Sheet |
 | PDF-Anzeige | PDFView (AppKit) | PDFView (UIKit) |
 
 ---
