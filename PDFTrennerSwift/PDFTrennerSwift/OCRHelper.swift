@@ -1,5 +1,6 @@
 import PDFKit
 import AppKit
+import Vision
 
 enum OCRHelper {
     static func recognizeTitle(from document: PDFDocument, pageIndex: Int) -> String {
@@ -14,38 +15,33 @@ enum OCRHelper {
             return ""
         }
 
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("pdftrenner_ocr_\(UUID().uuidString).png")
+        return performVisionOCR(on: cgImage)
+    }
 
-        guard let dest = CGImageDestinationCreateWithURL(tempURL as CFURL, "public.png" as CFString, 1, nil) else { return "" }
-        CGImageDestinationAddImage(dest, cgImage, nil)
-        guard CGImageDestinationFinalize(dest) else { return "" }
+    private static func performVisionOCR(on cgImage: CGImage) -> String {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.recognitionLanguages = ["de", "en"]
+        request.usesLanguageCorrection = true
 
-        defer {
-            try? FileManager.default.removeItem(at: tempURL)
-        }
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["tesseract", tempURL.path, "stdout", "-l", "deu+eng", "--psm", "6"]
-        process.standardOutput = Pipe()
-        process.standardError = Pipe()
-
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         do {
-            try process.run()
-            let data = (process.standardOutput as? Pipe)?.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit()
-            guard process.terminationStatus == 0 else {
-                print("OCR: tesseract exit \(process.terminationStatus)")
-                return ""
-            }
-            guard let outputData = data, let text = String(data: outputData, encoding: .utf8) else { return "" }
-            let cleaned = text.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
-            print("OCR-Ergebnis: [\(cleaned)]")
-            return cleaned
+            try handler.perform([request])
         } catch {
-            print("OCR-Fehler: \(error.localizedDescription)")
+            print("Vision OCR Fehler: \(error.localizedDescription)")
             return ""
         }
+
+        guard let observations = request.results else { return "" }
+
+        let text = observations.compactMap { observation in
+            observation.topCandidates(1).first?.string
+        }.joined(separator: " ")
+
+        let cleaned = text.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        print("OCR-Ergebnis (Vision): [\(cleaned)]")
+        return cleaned
     }
 
     private static func renderCroppedImage(from page: PDFPage, rect: CGRect) -> CGImage? {
