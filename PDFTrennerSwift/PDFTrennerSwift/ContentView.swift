@@ -1,8 +1,109 @@
 import SwiftUI
 import PDFKit
 
+class TitlePanelController: NSObject, NSTextFieldDelegate {
+    private var panel: NSPanel?
+    private weak var vm: PDFViewModel?
+    private var textField: NSTextField?
+
+    func show(vm: PDFViewModel, mainWindow: NSWindow?) {
+        close()
+        self.vm = vm
+
+        let myPanel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 400, height: 130),
+                            styleMask: [.titled, .closable, .utilityWindow],
+                            backing: .buffered, defer: false)
+        myPanel.title = "Titel festlegen"
+        myPanel.isFloatingPanel = true
+        myPanel.level = .floating
+
+        let headerLabel = NSTextField(labelWithString: "Startseite \(vm.startPage + 1) — Titel:")
+        headerLabel.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+
+        let textField = NSTextField()
+        textField.placeholderString = "Songtitel"
+        textField.stringValue = vm.detectedTitle
+        textField.font = NSFont.systemFont(ofSize: 13)
+        textField.lineBreakMode = .byTruncatingTail
+        textField.tag = 100
+        textField.delegate = self
+        self.textField = textField
+
+        let cancelButton = NSButton(title: "Abbrechen", target: self, action: #selector(cancelAction))
+        cancelButton.bezelStyle = .roundRect
+        cancelButton.keyEquivalent = "\u{1b}"
+
+        let okButton = NSButton(title: "OK", target: self, action: #selector(confirmAction))
+        okButton.bezelStyle = .rounded
+        okButton.keyEquivalent = "\r"
+
+        let buttonStack = NSStackView()
+        buttonStack.orientation = .horizontal
+        buttonStack.spacing = 8
+        buttonStack.addView(cancelButton, in: .trailing)
+        buttonStack.addView(okButton, in: .trailing)
+
+        let stack = NSStackView()
+        stack.orientation = .vertical
+        stack.spacing = 8
+        stack.edgeInsets = NSEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
+        stack.addView(headerLabel, in: .leading)
+        stack.addView(textField, in: .leading)
+        stack.addView(buttonStack, in: .trailing)
+
+        myPanel.contentView = stack
+
+        if let mainWindow = mainWindow {
+            let mainFrame = mainWindow.frame
+            let gap: CGFloat = 6
+            let panelX = mainFrame.origin.x + mainFrame.width + gap
+            let mainBottomY = mainFrame.origin.y
+            myPanel.setFrameOrigin(NSPoint(x: panelX, y: mainBottomY))
+        }
+
+        myPanel.makeKeyAndOrderFront(nil)
+        textField.becomeFirstResponder()
+        textField.selectText(nil)
+
+        self.panel = myPanel
+    }
+
+    func close() {
+        textField = nil
+        panel?.close()
+        panel = nil
+    }
+
+    func updateTextField(_ text: String) {
+        guard let tf = textField else { return }
+        tf.stringValue = text
+        tf.selectText(nil)
+    }
+
+    @objc private func confirmAction() {
+        guard let textField = panel?.contentView?.viewWithTag(100) as? NSTextField else { return }
+        vm?.currentTitle = textField.stringValue
+        vm?.showSaveDialog = false
+        vm?.updateStatus()
+    }
+
+    @objc private func cancelAction() {
+        vm?.currentTitle = ""
+        vm?.showSaveDialog = false
+        vm?.updateStatus()
+    }
+
+    func controlTextDidEndEditing(_ obj: Notification) {
+        guard obj.object is NSTextField else { return }
+        if let event = NSApp.currentEvent, event.type == .keyDown, event.specialKey == .carriageReturn {
+            confirmAction()
+        }
+    }
+}
+
 struct ContentView: View {
     @StateObject private var vm = PDFViewModel()
+    @State private var titlePanelController = TitlePanelController()
 
     var body: some View {
         Group {
@@ -16,8 +117,18 @@ struct ContentView: View {
         }
         .frame(minWidth: 600, minHeight: 700)
         .onAppear { vm.onAppear() }
-        .sheet(isPresented: $vm.showSaveDialog) {
-            saveDialog
+        .onReceive(vm.$showSaveDialog) { show in
+            if show {
+                let mainWindow = NSApp.windows.first(where: { $0.isVisible })
+                titlePanelController.show(vm: vm, mainWindow: mainWindow)
+            } else {
+                titlePanelController.close()
+            }
+        }
+        .onReceive(vm.$detectedTitle) { title in
+            if !title.isEmpty {
+                titlePanelController.updateTextField(title)
+            }
         }
         .alert(isPresented: $vm.showError) {
             Alert(
@@ -79,41 +190,14 @@ struct ContentView: View {
                 Spacer()
                 Button(" ← ") { vm.prevPage() }
                 Button(" → ") { vm.nextPage() }
-                Button("Start (F)") { vm.setFirst() }
+                Button("Start+F") { vm.setFirst() }
                     .keyboardShortcut("f", modifiers: [])
-                Button("Ende (L)") { vm.setLast() }
+                Button("Ende+L") { vm.setLast() }
                     .keyboardShortcut("l", modifiers: [])
             }
             .padding(8)
             .background(Color(nsColor: .controlBackgroundColor))
         }
-    }
-
-    // MARK: - Save Dialog
-    private var saveDialog: some View {
-        VStack(spacing: 12) {
-            Text("Extraktion")
-                .font(.headline)
-            Text("Dateiname für Seiten \(vm.startPage + 1) bis \(vm.endPage + 1):")
-            TextField("Songtitel", text: $vm.detectedTitle, onCommit: {
-                vm.showSaveDialog = false
-                vm.saveSplit()
-            })
-                .textFieldStyle(.roundedBorder)
-                .frame(minWidth: 300)
-            HStack {
-                Button("Abbrechen") { vm.showSaveDialog = false }
-                    .keyboardShortcut(.cancelAction)
-                Button("Speichern") {
-                    vm.showSaveDialog = false
-                    vm.saveSplit()
-                }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.return)
-            }
-        }
-        .padding(20)
-        .frame(width: 400)
     }
 }
 
@@ -136,7 +220,9 @@ struct PDFKitRepresentedView: NSViewRepresentable {
         }
         if let doc = document, currentPage >= 0 && currentPage < doc.pageCount {
             if let page = doc.page(at: currentPage) {
-                nsView.go(to: page)
+                DispatchQueue.main.async {
+                    nsView.go(to: page)
+                }
             }
         }
     }
@@ -161,10 +247,12 @@ class PDFViewModel: ObservableObject {
     @Published var errorDetail = ErrorDetail(message: "")
     @Published var showSaveDialog = false
     @Published var detectedTitle = ""
+    @Published var currentTitle = ""
 
     private var pdfPath: String?
     private var numPages = 0
     private var keyMonitor: Any?
+    private var hadSavedState = false
 
     func onAppear() {
         let args = CommandLine.arguments
@@ -172,7 +260,7 @@ class PDFViewModel: ObservableObject {
             let path = args[1]
             if path.hasPrefix("-") {
                 splashMessage = "Öffne Dateiauswahl…"
-DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self.openFileChooser() }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self.openFileChooser() }
             } else {
                 pdfPath = (path as NSString).expandingTildeInPath
                 let resolved = URL(fileURLWithPath: pdfPath!).standardized.path
@@ -228,12 +316,16 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self.openFileChooser() }
         if saved >= 0 && saved < numPages {
             startPage = saved
             currentPage = saved
+            hadSavedState = true
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             self.isLoading = false
             self.updateStatus()
             NSApp.activate(ignoringOtherApps: true)
+            if self.hadSavedState {
+                self.setFirst()
+            }
         }
     }
 
@@ -254,6 +346,9 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self.openFileChooser() }
         startPage = currentPage
         updateStatus()
         print("Startseite gesetzt auf: \(startPage + 1)")
+        detectedTitle = ""
+        showSaveDialog = true
+        runOCR()
     }
 
     func setLast() {
@@ -264,9 +359,7 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self.openFileChooser() }
             showError = true
             return
         }
-        detectedTitle = ""
-        showSaveDialog = true
-        runOCR()
+        saveSplit()
     }
 
     private func runOCR() {
@@ -282,7 +375,7 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self.openFileChooser() }
 
     func saveSplit() {
         guard let doc = document, let path = pdfPath else { return }
-        let title = detectedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = currentTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         var safeTitle = title.replacingOccurrences(of: "[^a-zA-Z0-9 _-]", with: "", options: .regularExpression)
         safeTitle = safeTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         if safeTitle.isEmpty {
@@ -305,7 +398,9 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self.openFileChooser() }
             if endPage < numPages - 1 {
                 currentPage = endPage + 1
                 startPage = currentPage
+                currentTitle = ""
                 updateStatus()
+                setFirst()
             } else {
                 let msg = "Letzte Seite erreicht."
                 errorDetail = ErrorDetail(message: msg)
@@ -318,8 +413,9 @@ DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { self.openFileChooser() }
         }
     }
 
-    private func updateStatus() {
-        statusText = "Seite: \(currentPage + 1) / \(numPages) | Start: Seite \(startPage + 1)"
+    func updateStatus() {
+        let titleInfo = currentTitle.isEmpty ? "" : " | Titel: \(currentTitle)"
+        statusText = "Seite: \(currentPage + 1) / \(numPages) | Start: Seite \(startPage + 1)\(titleInfo)"
     }
 
     // MARK: - Key Monitor

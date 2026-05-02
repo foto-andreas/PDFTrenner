@@ -17,6 +17,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.util.Duration;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
@@ -39,6 +40,7 @@ public class PdfSplitterApp extends Application {
     private PDFRenderer renderer;
     private int currentPage = 0;
     private int startPage = 0;
+    private String currentTitle = "";
     private String pdfPath;
     private int numPages;
 
@@ -199,6 +201,10 @@ public class PdfSplitterApp extends Application {
         }
 
         buildAndShowUI();
+
+        if (savedPage >= 0 && savedPage < numPages) {
+            setFirst();
+        }
     }
 
     private void buildAndShowUI() {
@@ -222,11 +228,11 @@ public class PdfSplitterApp extends Application {
         statusLabel.setMaxWidth(Double.MAX_VALUE);
         statusLabel.setAlignment(Pos.CENTER);
 
-        Button firstPageBtn = new Button("First Page");
-        firstPageBtn.setTooltip(new Tooltip("Startseite setzen (Taste: F)"));
+        Button firstPageBtn = new Button("Start (F)");
+        firstPageBtn.setTooltip(new Tooltip("Startseite + Titel festlegen (Taste: F)"));
         firstPageBtn.setOnAction(e -> setFirst());
 
-        Button lastPageBtn = new Button("Last Page");
+        Button lastPageBtn = new Button("Ende (L)");
         lastPageBtn.setTooltip(new Tooltip("Endseite setzen + Speichern (Taste: L)"));
         lastPageBtn.setOnAction(e -> setLast());
 
@@ -340,7 +346,8 @@ public class PdfSplitterApp extends Application {
     }
 
     private void updateStatus() {
-        String status = String.format("Seite: %d / %d | Aktueller Start: Seite %d", currentPage + 1, numPages, startPage + 1);
+        String titleInfo = currentTitle.isEmpty() ? "" : " | Titel: " + currentTitle;
+        String status = String.format("Seite: %d / %d | Start: Seite %d%s", currentPage + 1, numPages, startPage + 1, titleInfo);
         statusLabel.setText(status);
     }
 
@@ -362,6 +369,20 @@ public class PdfSplitterApp extends Application {
         startPage = currentPage;
         updateStatus();
         System.out.println("Startseite gesetzt auf: " + (startPage + 1));
+
+        statusLabel.setText("Erkenne Titel (OCR)...");
+        Thread ocrThread = new Thread(() -> {
+            String detectedTitle = recognizeTitle(startPage);
+            if (!detectedTitle.isEmpty()) {
+                System.out.println("Erkannter Titel: " + detectedTitle);
+            }
+            Platform.runLater(() -> {
+                statusLabel.setText(null);
+                showTitleDialogForStart(detectedTitle);
+            });
+        }, "OCR-Thread");
+        ocrThread.setDaemon(true);
+        ocrThread.start();
     }
 
     private void setLast() {
@@ -375,37 +396,75 @@ public class PdfSplitterApp extends Application {
             return;
         }
 
-        statusLabel.setText("Erkenne Titel (OCR)...");
-        Thread ocrThread = new Thread(() -> {
-            String detectedTitle = recognizeTitle(startPage);
-            if (!detectedTitle.isEmpty()) {
-                System.out.println("Erkannter Titel: " + detectedTitle);
-            }
-            Platform.runLater(() -> {
-                statusLabel.setText(null);
-                showTitleDialog(detectedTitle, startPage, endPage);
-            });
-        }, "OCR-Thread");
-        ocrThread.setDaemon(true);
-        ocrThread.start();
+        if (currentTitle == null || currentTitle.trim().isEmpty()) {
+            currentTitle = "Song_Seite_" + (startPage + 1);
+        }
+        saveSplit(currentTitle, startPage, endPage);
     }
 
-    private void showTitleDialog(String detectedTitle, int start, int end) {
-        debug("showTitleDialog: detectedTitle=[" + detectedTitle + "]");
-        String defaultValue = (detectedTitle != null && !detectedTitle.isEmpty()) ? detectedTitle : "";
-        TextInputDialog dialog = new TextInputDialog(defaultValue);
-        dialog.initOwner(primaryStage);
-        dialog.initModality(Modality.WINDOW_MODAL);
-        dialog.setTitle("Extraktion");
-        dialog.setHeaderText(String.format("Dateiname f\u00fcr Seiten %d bis %d:", start + 1, end + 1));
-        dialog.setContentText("Songtitel:");
+    private Stage titleStage;
+    private TextField titleTextField;
 
-        bringToFront(primaryStage);
-        Optional<String> result = dialog.showAndWait();
+    private void showTitleDialogForStart(String detectedTitle) {
+        debug("showTitleDialogForStart: detectedTitle=[" + detectedTitle + "]");
+        String defaultValue = (detectedTitle != null && !detectedTitle.isEmpty()) ? detectedTitle : "";
+        currentTitle = defaultValue;
+
+        if (titleStage == null) {
+            titleStage = new Stage();
+            titleStage.initOwner(primaryStage);
+            titleStage.initStyle(StageStyle.UTILITY);
+            titleStage.setResizable(false);
+            titleStage.setTitle("Titel festlegen");
+            titleStage.alwaysOnTopProperty();
+
+            titleTextField = new TextField(defaultValue);
+            titleTextField.setPrefWidth(320);
+            titleTextField.setOnAction(e -> confirmTitle());
+
+            Button okBtn = new Button("OK");
+            okBtn.setDefaultButton(true);
+            okBtn.setOnAction(e -> confirmTitle());
+
+            Button cancelBtn = new Button("Abbrechen");
+            cancelBtn.setCancelButton(true);
+            cancelBtn.setOnAction(e -> {
+                currentTitle = "";
+                titleStage.hide();
+            });
+
+            Label headerLabel = new Label();
+            headerLabel.textProperty().bind(javafx.beans.binding.Bindings.format(
+                    "Startseite %d \u2014 Titel:", startPage + 1));
+
+            HBox buttonBox = new HBox(10, cancelBtn, okBtn);
+            buttonBox.setAlignment(Pos.CENTER_RIGHT);
+            VBox root = new VBox(8, headerLabel, titleTextField, buttonBox);
+            root.setStyle("-fx-padding: 14; -fx-background-color: #f5f5f5;");
+            root.setAlignment(Pos.CENTER_LEFT);
+            titleStage.setScene(new Scene(root));
+        }
+
+        titleTextField.setText(defaultValue);
+        titleStage.sizeToScene();
+
+        double dialogWidth = titleStage.getWidth() <= 0 ? 400 : titleStage.getWidth();
+        double dialogHeight = titleStage.getHeight() <= 0 ? 120 : titleStage.getHeight();
+        double gap = 6;
+        titleStage.setX(primaryStage.getX() + primaryStage.getWidth() + gap);
+        titleStage.setY(primaryStage.getY() + primaryStage.getHeight() - dialogHeight);
+
+        titleStage.show();
+        titleStage.requestFocus();
+        titleTextField.requestFocus();
+        titleTextField.selectAll();
+    }
+
+    private void confirmTitle() {
+        currentTitle = titleTextField.getText();
+        titleStage.hide();
         primaryStage.requestFocus();
-        result.ifPresent(songTitle -> {
-            saveSplit(songTitle, start, end);
-        });
+        updateStatus();
     }
 
     private void saveSplit(String songTitle, int start, int end) {
@@ -432,7 +491,9 @@ public class PdfSplitterApp extends Application {
             if (end < numPages - 1) {
                 currentPage = end + 1;
                 startPage = currentPage;
+                currentTitle = "";
                 showPage();
+                setFirst();
             } else {
                 Alert alert = new Alert(Alert.AlertType.INFORMATION, "Letzte Seite erreicht.");
                 alert.initOwner(primaryStage);
