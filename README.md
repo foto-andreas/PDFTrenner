@@ -1,21 +1,33 @@
 # PDFTrenner
 
-PDFTrenner ist ein JavaFX-basiertes Tool zum interaktiven Aufteilen von PDF-Dateien.
+PDFTrenner ist ein Tool zum interaktiven Aufteilen von PDF-Dateien.
 Es zeigt die PDF-Seiten an und erlaubt das Markieren von Bereichen, die als separate
 PDFs gespeichert werden.
 
-## Features
+Es gibt drei Varianten:
 
-- Interaktives Blättern durch PDF-Seiten mit Pfeiltasten
-- Markieren der Startseite (`F`) öffnet Titeleingabe-Dialog mit OCR-Vorschlag
-- Endseite setzen (`L`) speichert den Abschnitt sofort
-- Automatische Titel-Erkennung via Tesseract OCR (obere 10% der Startseite)
+| Variante | Plattform | Sprache | OCR |
+|----------|-----------|---------|-----|
+| **JavaFX** | macOS, Windows, Linux | Java 21+ | Tesseract |
+| **Swift** | macOS 12+ (ARM + Intel) | SwiftUI | Vision-Framework |
+| **iOS** | iOS 16+ (iPhone + iPad) | SwiftUI | Vision-Framework |
+
+## Features (alle Varianten)
+
+- Interaktives Blättern durch PDF-Seiten
+- Markieren der Startseite (`F` / Button) öffnet Titeleingabe mit OCR-Vorschlag
+- Endseite setzen (`L` / Button) speichert den Abschnitt sofort
+- Automatische Titel-Erkennung (obere 10% der Startseite)
 - Zustands-Speicherung: Merkt sich die letzte Position pro PDF
-- Native Installer fuer macOS, Windows und Linux (JRE ist enthalten)
+- Umlaut-Konvertierung in Dateinamen (ä→ae, ö→oe, ü→ue, ß→ss)
 
-## Voraussetzungen
+---
 
-### Zum Entwickeln / Ausfuehren
+## JavaFX-Variante
+
+### Voraussetzungen
+
+#### Zum Entwickeln / Ausfuehren
 
 - **Java 21+** mit `jpackage` (fuer native Builds)
 - **Gradle** (Wrapper ist im Projekt enthalten)
@@ -24,7 +36,7 @@ PDFs gespeichert werden.
   - Windows: [UB Mannheim Installer](https://github.com/UB-Mannheim/tesseract/wiki)
   - Linux: `sudo apt install tesseract-ocr tesseract-ocr-deu`
 
-### Zum Betrieb (fertige Installer)
+#### Zum Betrieb (fertige Installer)
 
 Nur **Tesseract OCR** muss auf dem System installiert sein. Das JRE ist in den
 Installern bereits enthalten.
@@ -144,3 +156,110 @@ run.sh                      — Entwicklungs-Startskript (macOS/Linux)
   angelegt und enthalten die zuletzt bearbeitete Startseite
 - **Ausgabe:** `Manual_Splits/` — Unterordner neben der Quell-PDF fuer
   extrahierte Seitenbereiche
+
+---
+
+## Swift-Variante (macOS)
+
+Native macOS-Anwendung mit SwiftUI und PDFKit. Keine externen Abhaengigkeiten —
+OCR laeuft ueber das im System enthaltene Vision-Framework.
+
+### Voraussetzungen
+
+- **macOS 12+** (Monterey)
+- **Xcode Command Line Tools** (`xcode-select --install`)
+- Kein Tesseract erforderlich
+
+### Schnellstart
+
+```bash
+cd PDFTrennerSwift
+swift build -c release
+.build/release/PDFTrennerSwift DATEI.pdf
+```
+
+### DMG erstellen
+
+```bash
+cd PDFTrennerSwift
+./build_dmg.sh              # Universal Binary (ARM + Intel) + DMG
+```
+
+Ergebnis: `PDFTrennerSwift-1.0-universal.dmg`
+
+### Projektstruktur
+
+```
+PDFTrennerSwift/
+├── Package.swift                    # Swift-Package, macOS 12+
+├── build_dmg.sh                     # Build-Skript (Universal Binary + DMG)
+└── PDFTrennerSwift/
+    ├── PDFTrennerApp.swift          # @main App-Einstieg, AppDelegate
+    ├── ContentView.swift            # UI + ViewModel + TitlePanelController
+    ├── OCRHelper.swift              # Vision-basierte OCR-Titelerkennung
+    ├── PDFDocumentHelper.swift      # PDF-Seitenextraktion
+    ├── StateHelper.swift            # Persistenz des Bearbeitungsstatus
+    └── Assets.xcassets/            # App-Icon (macOS-Stil)
+```
+
+### Unterschiede zur JavaFX-Variante
+
+| Aspekt | JavaFX | Swift |
+|--------|--------|-------|
+| OCR | Tesseract (extern) | Vision-Framework (System) |
+| Titeleingabe | Modaler Dialog | NSPanel rechts neben dem Fenster |
+| Beenden | Menu / Strg+C | Fenster schließen beendet die App |
+| Installation | JRE + Installer | DMG oder `swift build` |
+
+---
+
+## iOS-Variante (iPhone / iPad)
+
+Native iOS-App mit SwiftUI. Gleiche Funktionalitaet wie die macOS-Version,
+aber mit touch-optimierter UI (Sheet statt NSPanel).
+
+### Voraussetzungen
+
+- **iOS 16+**
+- **Xcode** (fuer Build und Deployment)
+- **Apple ID** (kostenlos moeglich, 7-Tage-Provisioning)
+
+### Build & Deployment
+
+1. `PDFTrenneriOS/PDFTrenneriOS.xcodeproj` in Xcode öffnen
+2. Unter *Signing & Capabilities* die persönliche Apple ID als Team auswaehlen
+3. iPhone/iPad per USB anschließen
+4. Build & Run auf dem Geraet
+
+Ohne bezahlten Developer-Account verfaengt das Profil nach 7 Tagen.
+Neu signieren via Xcode verlaengert es.
+
+### Projektstruktur
+
+```
+PDFTrenneriOS/
+└── PDFTrenneriOS/
+    ├── PDFTrennerApp.swift          # @main App-Einstieg
+    ├── ContentView.swift            # UI + ViewModel (Sheet-basiert)
+    ├── OCRHelper.swift              # Vision-OCR (identisch zur macOS-Version)
+    ├── PDFDocumentHelper.swift      # PDF-Seitenextraktion
+    ├── StateHelper.swift            # Persistenz
+    └── Assets.xcassets/            # App-Icon
+```
+
+### Unterschiede zur macOS-Variante
+
+| Aspekt | macOS | iOS |
+|--------|-------|-----|
+| Titeleingabe | NSPanel (.floating) rechts neben Fenster | SwiftUI .sheet (.medium detent) |
+| Dateiauswahl | NSOpenPanel | UIDocumentPickerViewController |
+| Tastaturkuerzel | F, L, Pfeiltasten | Buttons in der UI |
+| PDF-Anzeige | PDFView (AppKit) | PDFView (UIKit) |
+
+---
+
+## Dokumentation
+
+- **PDFTrennerSwift/BENUTZERDOKU.md** — Benutzerdokumentation (rein fachlich, deutsch)
+- **PDFTrennerSwift/SYSTEMDOKU.md** — Systemdokumentation (technisch, deutsch)
+- Beide auch als `.html` und `.pdf` verfuegbar
