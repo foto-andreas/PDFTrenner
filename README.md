@@ -7,8 +7,9 @@ PDFs gespeichert werden.
 ## Features
 
 - Interaktives Blättern durch PDF-Seiten mit Pfeiltasten
-- Markieren von Start- (`F`) und Endseite (`L`) für Extraktion
-- Automatische Titel-Erkennung via Tesseract OCR (obere 10% der ersten Seite)
+- Markieren der Startseite (`F`) öffnet Titeleingabe-Dialog mit OCR-Vorschlag
+- Endseite setzen (`L`) speichert den Abschnitt sofort
+- Automatische Titel-Erkennung via Tesseract OCR (obere 10% der Startseite)
 - Zustands-Speicherung: Merkt sich die letzte Position pro PDF
 - Native Installer fuer macOS, Windows und Linux (JRE ist enthalten)
 
@@ -49,8 +50,8 @@ gradlew.bat run --args="DATEI.pdf"
 | Taste | Aktion |
 |-------|--------|
 | `←` / `→` | Seite zurueck / vor |
-| `F` | Startseite setzen (erste Seite des neuen Teildokuments) |
-| `L` | Endseite setzen — oeffnet Dialog mit automatisch erkanntem Titel |
+| `F` | Startseite setzen — öffnet Titeleingabe-Dialog (Titel wird per OCR vorausgefüllt) |
+| `L` | Endseite setzen und Abschnitt sofort speichern |
 
 Die extrahierten PDFs landen im Unterordner `Manual_Splits/` neben der
 Quell-PDF.

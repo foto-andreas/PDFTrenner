@@ -43,8 +43,9 @@ Zentrale Zustandsverwaltung:
 | `isLoading` | `Bool` | Splash-Screen aktiv |
 | `showSaveDialog` | `Bool` | Titeleingabe-Panel sichtbar |
 | `detectedTitle` | `String` | OCR-Ergebnis |
-| `currentTitle` | `String` | Aktueller/durch den Benutzer bestätigter Titel |
+| `currentTitle` | `String` | Durch den Benutzer bestätigter Titel |
 | `errorMessage` | `String?` | Fehlertext |
+| `errorDetail` | `ErrorDetail` | Fehlerdetail-Objekt für Alert |
 | `pdfPath` | `String?` | Pfad der geladenen PDF |
 
 **Workflow-Methoden:**
@@ -58,7 +59,6 @@ Zentrale Zustandsverwaltung:
 | `setLast()` | Endseite = aktuelle Seite, `saveSplit()` aufrufen |
 | `saveSplit()` | Seiten extrahieren, speichern, nächste Startseite |
 | `runOCR()` | Asynchrone OCR im Hintergrund-Thread |
-| `confirmTitle()` / `cancelTitle()` | Titeleingabe bestätigen/abbrechen |
 
 **Key-Monitor**: Lokaler `NSEvent.addLocalMonitorForEvents(.keyDown)` fängt Pfeiltasten sowie `F` und `L` ab. Während die Titeleingabe aktiv ist, werden Tastenkürzel blockiert.
 
@@ -69,11 +69,12 @@ Erbt von `NSObject`, da `@objc` in Swift-Structs nicht möglich ist.
 - Erstellt ein `NSPanel` (`.utilityWindow`, `.floating`) direkt rechts neben dem Hauptfenster
 - Positionierung: `mainFrame.origin.x + mainFrame.width + 6` (6px Lücke)
 - Enthält: Header-Label, `NSTextField` mit Platzhalter "Songtitel", Abbrechen/OK-Buttons
-- `updateTextField(_:)` ermöglicht asynchrates Update des OCR-Ergebnisses ins Textfeld
+- `confirmAction` bestätigt den Titel, `cancelAction` lehnt ab
+- `updateTextField(_:)` ermöglicht asynchrones Update des OCR-Ergebnisses ins Textfeld
 
 #### ContentView (`View`)
 
-- Drei Zustände: Splash → Fehler → PDF-Ansige
+- Drei Zustände: Splash → Fehler → PDF-Ansicht
 - Reagiert auf `$showSaveDialog` (`.onReceive`) → Panel öffnen/schließen
 - Reagiert auf `$detectedTitle` → Textfeld aktualisieren
 - Fehler-Alert über `.alert(isPresented:)`

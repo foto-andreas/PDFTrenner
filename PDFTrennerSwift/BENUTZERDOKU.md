@@ -117,7 +117,7 @@ Die Anwendung erkennt Titel automatisch aus der oberen 10% der Startseite.
 - **Datei nicht gefunden** — Der angegebene Pfad ist ungültig
 - **PDF konnte nicht geladen werden** — Die Datei ist kein gültiges PDF
 - **Keine Datei ausgewählt** — Der Dateiauswahl-Dialog wurde abgebrochen
-- **Endseite vor Startseite** — `L` wurde gedrückt, bevor eine Startseite gesetzt wurde
+- **Endseite kann nicht vor der Startseite liegen** — `L` wurde gedrückt, bevor eine Startseite gesetzt wurde
 - **Letzte Seite erreicht** — Das Ende des Dokuments wurde erreicht
 
 ## Beenden
