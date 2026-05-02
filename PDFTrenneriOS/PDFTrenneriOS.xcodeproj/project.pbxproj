@@ -13,6 +13,7 @@
 		BF000001234567800001AAEE /* PDFDocumentHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF000003234567800001AAEE /* PDFDocumentHelper.swift */; };
 		BF000001234567800001AAFF /* StateHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF000003234567800001AAFF /* StateHelper.swift */; };
 		BF000001234567800001BB00 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BF000003234567800001BB00 /* Assets.xcassets */; };
+		BF000001234567800001BB01 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BF000003234567800001BB01 /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,6 +23,7 @@
 		BF000003234567800001AAEE /* PDFDocumentHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFDocumentHelper.swift; sourceTree = "<group>"; };
 		BF000003234567800001AAFF /* StateHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateHelper.swift; sourceTree = "<group>"; };
 		BF000003234567800001BB00 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BF000003234567800001BB01 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		E1392C232FA68EBD00E005C9 /* PDFTrenneriOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PDFTrenneriOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -44,6 +46,7 @@
 				BF000003234567800001AADD /* OCRHelper.swift */,
 				BF000003234567800001AAEE /* PDFDocumentHelper.swift */,
 				BF000003234567800001AAFF /* StateHelper.swift */,
+				BF000003234567800001BB01 /* LaunchScreen.storyboard */,
 				BF000003234567800001BB00 /* Assets.xcassets */,
 				E1392C232FA68EBD00E005C9 /* PDFTrenneriOS.app */,
 			);
@@ -110,6 +113,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BF000001234567800001BB00 /* Assets.xcassets in Resources */,
+				BF000001234567800001BB01 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -247,6 +251,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = PDFTrenner;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -272,6 +277,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = PDFTrenner;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
