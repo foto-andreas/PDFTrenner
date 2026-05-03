@@ -549,7 +549,9 @@ struct iOSPDFKitView: UIViewRepresentable {
         let view = PDFView()
         view.autoScales = true
         view.displayMode = .singlePage
-        view.displayDirection = .vertical
+        view.displayDirection = .horizontal
+        view.displaysPageBreaks = false
+        view.usePageViewController(true, withViewOptions: nil)
         view.backgroundColor = UIColor.systemBackground
         return view
     }
