@@ -63,7 +63,7 @@ gradlew.bat run --args="DATEI.pdf"
 |-------|--------|
 | `←` / `→` | Seite zurueck / vor |
 | `F` | Startseite setzen — öffnet Titeleingabe-Dialog (Titel wird per OCR vorausgefüllt) |
-| `Seite` | Seitennummer eingeben und direkt zur Seite springen |
+| `G` | Seitensprung-Dialog öffnen |
 | `L` | Endseite setzen und Abschnitt sofort speichern |
 
 Die extrahierten PDFs landen im Unterordner `Manual_Splits/` neben der

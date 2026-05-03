@@ -107,6 +107,7 @@ public class PdfSplitterApp extends Application {
             pdfPath = f.getAbsolutePath();
             initPdfAndShow();
         } else {
+            primaryStage.toFront();
             openFileChooserAndInit();
         }
     }
@@ -232,7 +233,7 @@ public class PdfSplitterApp extends Application {
         firstPageBtn.setTooltip(new Tooltip("Startseite + Titel festlegen (Taste: F)"));
         firstPageBtn.setOnAction(e -> setFirst());
 
-        Button pageJumpBtn = new Button("Seite");
+        Button pageJumpBtn = new Button("Seite (G)");
         pageJumpBtn.setTooltip(new Tooltip("Zu einer bestimmten Seite springen"));
         pageJumpBtn.setOnAction(e -> showPageJumpDialog());
 
@@ -258,6 +259,9 @@ public class PdfSplitterApp extends Application {
             } else if (event.getCode() == KeyCode.F) {
                 setFirst();
                 event.consume();
+            } else if (event.getCode() == KeyCode.G) {
+                showPageJumpDialog();
+                event.consume();
             } else if (event.getCode() == KeyCode.L) {
                 setLast();
                 event.consume();
@@ -267,6 +271,12 @@ public class PdfSplitterApp extends Application {
         primaryStage.setTitle("PDFTrenner - " + new File(pdfPath).getName());
         primaryStage.setScene(scene);
         primaryStage.setResizable(true);
+        primaryStage.setOnCloseRequest(event -> {
+            if (titleStage != null && titleStage.isShowing()) {
+                titleStage.close();
+            }
+            Platform.exit();
+        });
 
         primaryStage.show();
         bringToFront(primaryStage);
@@ -484,15 +494,47 @@ public class PdfSplitterApp extends Application {
         titleTextField.setText(defaultValue);
         titleStage.sizeToScene();
 
-        double dialogHeight = titleStage.getHeight() <= 0 ? 120 : titleStage.getHeight();
-        double gap = 6;
-        titleStage.setX(primaryStage.getX() + primaryStage.getWidth() + gap);
-        titleStage.setY(primaryStage.getY() + primaryStage.getHeight() - dialogHeight);
+        positionTitleDialog();
 
         titleStage.show();
         titleStage.requestFocus();
         titleTextField.requestFocus();
         titleTextField.selectAll();
+    }
+
+    private void positionTitleDialog() {
+        titleStage.sizeToScene();
+
+        double gap = 6;
+        double mainX = primaryStage.getX();
+        double mainY = primaryStage.getY();
+        double mainW = primaryStage.getWidth();
+        double mainH = primaryStage.getHeight();
+        double dialogW = titleStage.getWidth();
+        double dialogH = titleStage.getHeight();
+
+        javafx.geometry.Rectangle2D screenBounds = javafx.stage.Screen.getPrimary().getVisualBounds();
+        double screenWidth = screenBounds.getWidth();
+        double screenHeight = screenBounds.getHeight();
+
+        double dialogX = mainX + mainW + gap;
+        double dialogY = mainY;
+
+        if (dialogX + dialogW > screenBounds.getMinX() + screenWidth) {
+            dialogX = mainX - dialogW - gap;
+        }
+        if (dialogX < screenBounds.getMinX()) {
+            dialogX = mainX + (mainW - dialogW) / 2;
+        }
+        if (dialogY + dialogH > screenBounds.getMinY() + screenHeight) {
+            dialogY = screenBounds.getMinY() + screenHeight - dialogH - gap;
+        }
+        if (dialogY < screenBounds.getMinY()) {
+            dialogY = screenBounds.getMinY() + gap;
+        }
+
+        titleStage.setX(dialogX);
+        titleStage.setY(dialogY);
     }
 
     private void confirmTitle() {
@@ -503,7 +545,11 @@ public class PdfSplitterApp extends Application {
     }
 
     private void saveSplit(String songTitle, int start, int end) {
-        String safeTitle = songTitle.replaceAll("[^a-zA-Z0-9 _-]", "").trim();
+        String safeTitle = songTitle
+                .replace("ä", "ae").replace("ö", "oe").replace("ü", "ue")
+                .replace("Ä", "Ae").replace("Ö", "Oe").replace("Ü", "Ue")
+                .replace("ß", "ss")
+                .replaceAll("[^a-zA-Z0-9 _-]", "").trim();
         if (safeTitle.isEmpty()) {
             safeTitle = "Song_Seite_" + (start + 1);
         }
@@ -522,7 +568,7 @@ public class PdfSplitterApp extends Application {
             newDoc.save(outFile);
             System.out.println("Erfolgreich extrahiert: " + outFile.getAbsolutePath());
 
-            saveState();
+            saveState(end);
             boolean hasNextPage = end < numPages - 1;
             if (hasNextPage) {
                 currentPage = end + 1;
@@ -552,7 +598,7 @@ public class PdfSplitterApp extends Application {
         if (ocrProcess != null) {
             ocrProcess.destroyForcibly();
         }
-        saveState();
+        saveState(startPage);
         if (document != null) {
             document.close();
         }
@@ -577,12 +623,12 @@ public class PdfSplitterApp extends Application {
         }
     }
 
-    private void saveState() {
+    private void saveState(int page) {
         if (pdfPath == null) return;
         File stateFile = getStateFile();
         try (FileOutputStream fos = new FileOutputStream(stateFile)) {
             Properties props = new Properties();
-            props.setProperty("startPage", String.valueOf(startPage));
+            props.setProperty("startPage", String.valueOf(page));
             props.store(fos, "PDFTrenner State");
         } catch (IOException e) {
             System.err.println("Zustand konnte nicht gespeichert werden: " + e.getMessage());
