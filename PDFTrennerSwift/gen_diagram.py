@@ -18,7 +18,10 @@ dwg.add_stylesheet('''\
     .end text { fill: white; }
 ''', 'styles')
 
-arrow_props = {'stroke': '#555', 'stroke-width': '2', 'fill': 'none', 'marker-end': dwg.defs.add(dwg.marker(insert=('10','10'), size=('10','10'), refX='10', refY='10', orient='auto')).add(dwg.path('M 0 0 L 10 5 L 0 10 z', fill='#555')))}
+arrow_marker = dwg.marker(insert=('10', '10'), size=('10', '10'), refX='10', refY='10', orient='auto')
+arrow_marker.add(dwg.path('M 0 0 L 10 5 L 0 10 z', fill='#555'))
+dwg.defs.add(arrow_marker)
+arrow_props = {'stroke': '#555', 'stroke-width': '2', 'fill': 'none', 'marker-end': arrow_marker.get_funciri()}
 
 def arrow(x1, y1, x2, y2, label=None):
     line = dwg.line(start=(x1, y1), end=(x2, y2), **arrow_props)
@@ -124,7 +127,7 @@ arrow(CX+60, 770, CX+160, 810) # right
 # J: PDF-Datei
 box(10, 810, 200, 60, ['PDF-Datei im', 'Ordner Manual_Splits'], 'output')
 # K: Fortschritt merken
-box(CX-100, 810, 200, 50, ['Fortschritt merken'], 'normal')
+box(CX-30, 810, 150, 50, ['Fortschritt merken'], 'normal')
 # L: Noch Seiten? (diamond)
 diamond(CX+160, 850, 160, 80, ['Noch Seiten', 'übrig?'])
 
