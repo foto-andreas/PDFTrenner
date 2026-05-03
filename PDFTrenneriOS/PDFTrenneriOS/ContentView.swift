@@ -22,17 +22,20 @@ class PDFViewModel: ObservableObject {
     @Published var currentTitle = ""
     @Published var pageJumpInput = ""
     @Published var showFilePicker = false
+    @Published var showOutputFolderPicker = false
+    @Published var pendingAutoTitleSheet = false
 
     var pdfPath: String?
     private var sourceURL: URL?
+    private var outputFolderURL: URL?
     private var isAccessingSourceURL = false
+    private var isAccessingOutputFolderURL = false
     private var numPages = 0
     private var hadSavedState = false
+    private var pendingSaveAfterOutputFolderPick = false
 
     func onAppear() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self.showFilePicker = true
-        }
+        showFilePicker = true
     }
 
     func openFileChooser() {
@@ -48,37 +51,57 @@ class PDFViewModel: ObservableObject {
 
         let path = url.path
         splashMessage = "Lade: \(url.lastPathComponent)"
+        isLoading = true
+        errorMessage = nil
+        infoMessage = nil
+        hadSavedState = false
 
-        guard FileManager.default.fileExists(atPath: path) else {
-            errorMessage = "Datei nicht gefunden:\n\(path)"
-            isLoading = false
-            return
-        }
-
-        guard let doc = PDFDocument(url: url) else {
-            errorMessage = "PDF konnte nicht geladen werden."
-            isLoading = false
-            return
-        }
-
-        document = doc
-        numPages = doc.pageCount
-        pdfPath = path
-        splashMessage = "Bereite Renderer vor (\(numPages) Seiten)…"
-
-        let saved = StateHelper.loadState(for: path)
-        if saved >= 0 && saved < numPages {
-            startPage = saved
-            currentPage = saved
-            hadSavedState = true
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            self.isLoading = false
-            self.updateStatus()
-            if self.hadSavedState {
-                self.setFirst()
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard FileManager.default.fileExists(atPath: path) else {
+                DispatchQueue.main.async {
+                    self.errorMessage = "Datei nicht gefunden:\n\(path)"
+                    self.isLoading = false
+                }
+                return
             }
+
+            guard let doc = PDFDocument(url: url) else {
+                DispatchQueue.main.async {
+                    self.errorMessage = "PDF konnte nicht geladen werden."
+                    self.isLoading = false
+                }
+                return
+            }
+
+            let pageCount = doc.pageCount
+            let saved = StateHelper.loadState(for: path)
+
+            DispatchQueue.main.async {
+                self.document = doc
+                self.numPages = pageCount
+                self.pdfPath = path
+                self.splashMessage = "Bereite Renderer vor (\(pageCount) Seiten)…"
+
+                if saved >= 0 && saved < pageCount {
+                    self.startPage = saved
+                    self.currentPage = saved
+                    self.hadSavedState = true
+                }
+
+                self.isLoading = false
+                self.updateStatus()
+                if self.hadSavedState {
+                    self.pendingAutoTitleSheet = true
+                }
+            }
+        }
+    }
+
+    func presentPendingAutoTitleSheetIfNeeded() {
+        guard pendingAutoTitleSheet, !showFilePicker, !showTitleSheet, document != nil, !isLoading else { return }
+        pendingAutoTitleSheet = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            self.setFirst()
         }
     }
 
@@ -96,7 +119,7 @@ class PDFViewModel: ObservableObject {
 
     func jumpToPagePrompt() {
         guard numPages > 0 else { return }
-        pageJumpInput = "\(currentPage + 1)"
+        pageJumpInput = ""
         showPageJumpSheet = true
     }
 
@@ -119,12 +142,39 @@ class PDFViewModel: ObservableObject {
     }
 
     func setLast() {
+        let trimmedTitle = currentTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else {
+            presentInfo(message: "Bitte zuerst einen Titel eingeben.")
+            return
+        }
         endPage = currentPage
         if endPage < startPage {
             presentError(message: "Endseite kann nicht vor der Startseite liegen!")
             return
         }
         saveSplit()
+    }
+
+    func chooseOutputFolder() {
+        pendingSaveAfterOutputFolderPick = false
+        showOutputFolderPicker = true
+    }
+
+    func handleOutputFolderPicked(url: URL) {
+        if isAccessingOutputFolderURL, let outputFolderURL {
+            outputFolderURL.stopAccessingSecurityScopedResource()
+        }
+        self.outputFolderURL = url
+        isAccessingOutputFolderURL = url.startAccessingSecurityScopedResource()
+        if pendingSaveAfterOutputFolderPick {
+            pendingSaveAfterOutputFolderPick = false
+            saveSplit()
+        }
+    }
+
+    func cancelOutputFolderSelection() {
+        pendingSaveAfterOutputFolderPick = false
+        presentInfo(message: "Kein Zielordner ausgewählt.")
     }
 
     private func runOCR() {
@@ -152,6 +202,10 @@ class PDFViewModel: ObservableObject {
     func saveSplit() {
         guard let doc = document, let path = pdfPath, let sourceURL else { return }
         let title = currentTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else {
+            presentInfo(message: "Bitte zuerst einen Titel eingeben.")
+            return
+        }
         var safeTitle = title
             .replacingOccurrences(of: "ä", with: "ae")
             .replacingOccurrences(of: "ö", with: "oe")
@@ -170,25 +224,67 @@ class PDFViewModel: ObservableObject {
             isAccessingSourceURL = sourceURL.startAccessingSecurityScopedResource()
         }
 
-        let dir = sourceURL
-            .deletingLastPathComponent()
-            .appendingPathComponent("Manual_Splits")
-        do {
-            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        } catch {
-            presentError(message: "Ordner konnte nicht angelegt werden: \(error.localizedDescription)")
+        guard let outputFolderURL else {
+            pendingSaveAfterOutputFolderPick = true
+            showOutputFolderPicker = true
             return
         }
 
-        let outFile = dir.appendingPathComponent("\(safeTitle).pdf")
+        let outFile = outputFolderURL.appendingPathComponent("\(safeTitle).pdf")
 
         if let savedDoc = PDFDocumentHelper.extractPages(from: doc, start: startPage, end: endPage) {
-            guard savedDoc.write(to: outFile) else {
-                presentError(message: "Fehler beim Speichern der Extraktion.")
+            guard let pdfData = savedDoc.dataRepresentation() else {
+                presentError(message: "Fehler beim Speichern der Extraktion: PDF-Daten konnten nicht erzeugt werden.")
                 return
             }
 
-            StateHelper.saveState(startPage: startPage == endPage ? endPage : endPage, for: path)
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension("pdf")
+
+            do {
+                try pdfData.write(to: tempURL, options: [.atomic])
+            } catch {
+                presentError(message: "Fehler beim Speichern der Extraktion: \(error.localizedDescription)")
+                return
+            }
+
+            var writeSucceeded = false
+            var coordinatorError: NSError?
+            var writeError: Error?
+            let coordinator = NSFileCoordinator(filePresenter: nil)
+            coordinator.coordinate(writingItemAt: outFile, options: .forReplacing, error: &coordinatorError) { coordinatedURL in
+                do {
+                    let fileManager = FileManager.default
+                    if fileManager.fileExists(atPath: coordinatedURL.path) {
+                        try fileManager.removeItem(at: coordinatedURL)
+                    } else {
+                        let parentDir = coordinatedURL.deletingLastPathComponent()
+                        try fileManager.createDirectory(at: parentDir, withIntermediateDirectories: true)
+                    }
+                    try fileManager.copyItem(at: tempURL, to: coordinatedURL)
+                    writeSucceeded = true
+                } catch {
+                    writeError = error
+                }
+            }
+
+            try? FileManager.default.removeItem(at: tempURL)
+
+            if let coordinatorError {
+                presentError(message: "Fehler beim Speichern der Extraktion: \(coordinatorError.localizedDescription)")
+                return
+            }
+            if let writeError {
+                presentError(message: "Fehler beim Speichern der Extraktion: \(writeError.localizedDescription)")
+                return
+            }
+            if !writeSucceeded {
+                presentError(message: "Fehler beim Speichern der Extraktion: PDF konnte nicht geschrieben werden.")
+                return
+            }
+
+            StateHelper.saveState(startPage: endPage, for: path)
 
             let hasNextPage = endPage < numPages - 1
             if hasNextPage {
@@ -224,6 +320,9 @@ class PDFViewModel: ObservableObject {
     deinit {
         if isAccessingSourceURL, let sourceURL {
             sourceURL.stopAccessingSecurityScopedResource()
+        }
+        if isAccessingOutputFolderURL, let outputFolderURL {
+            outputFolderURL.stopAccessingSecurityScopedResource()
         }
     }
 }
@@ -261,6 +360,22 @@ struct ContentView: View {
                 vm.isLoading = false
             }
             .ignoresSafeArea()
+        }
+        .fullScreenCover(isPresented: $vm.showOutputFolderPicker) {
+            FolderPicker { url in
+                vm.showOutputFolderPicker = false
+                vm.handleOutputFolderPicked(url: url)
+            } onCancel: {
+                vm.showOutputFolderPicker = false
+                vm.cancelOutputFolderSelection()
+            }
+            .ignoresSafeArea()
+        }
+        .onChange(of: vm.showFilePicker) { _ in
+            vm.presentPendingAutoTitleSheetIfNeeded()
+        }
+        .onChange(of: vm.isLoading) { _ in
+            vm.presentPendingAutoTitleSheetIfNeeded()
         }
         .sheet(isPresented: $vm.showTitleSheet) {
             TitleSheetView(vm: vm)
@@ -320,7 +435,7 @@ struct ContentView: View {
 
     private var pdfView: some View {
         VStack(spacing: 0) {
-            iOSPDFKitView(document: vm.document, currentPage: vm.currentPage)
+            iOSPDFKitView(vm: vm, document: vm.document, currentPage: vm.currentPage)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             toolbarBar
@@ -368,13 +483,24 @@ struct ContentView: View {
     private var pageNavButtons: some View {
         HStack(spacing: 8) {
             Button { vm.prevPage() } label: {
-                Image(systemName: "chevron.left")
+                Label("Zurück", systemImage: "chevron.left")
+                    .font(.system(size: isPadLayout ? 14 : 15, weight: .semibold))
+                    .lineLimit(1)
+                    .frame(minWidth: 92)
             }
             .disabled(vm.currentPage == 0)
+            .buttonStyle(.bordered)
+            .fixedSize(horizontal: true, vertical: false)
 
             Button { vm.nextPage() } label: {
-                Image(systemName: "chevron.right")
+                Label("Weiter", systemImage: "chevron.right")
+                    .font(.system(size: isPadLayout ? 14 : 15, weight: .semibold))
+                    .lineLimit(1)
+                    .frame(minWidth: 92)
             }
+            .disabled(vm.document.map { vm.currentPage >= $0.pageCount - 1 } ?? true)
+            .buttonStyle(.bordered)
+            .fixedSize(horizontal: true, vertical: false)
         }
     }
 
@@ -388,6 +514,8 @@ struct ContentView: View {
 
     private var actionButtons: some View {
         HStack(spacing: 12) {
+            let hasTitle = !vm.currentTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
             Button { vm.setFirst() } label: {
                 Label("Start", systemImage: "text.cursor")
                     .font(.system(size: isPadLayout ? 15 : 16, weight: .semibold))
@@ -395,6 +523,15 @@ struct ContentView: View {
                     .frame(minWidth: 128)
             }
             .buttonStyle(.borderedProminent)
+            .fixedSize(horizontal: true, vertical: false)
+
+            Button { vm.chooseOutputFolder() } label: {
+                Label("Ziel", systemImage: "folder")
+                    .font(.system(size: isPadLayout ? 15 : 16, weight: .semibold))
+                    .lineLimit(1)
+                    .frame(minWidth: 128)
+            }
+            .buttonStyle(.bordered)
             .fixedSize(horizontal: true, vertical: false)
 
             Button { vm.jumpToPagePrompt() } label: {
@@ -414,6 +551,7 @@ struct ContentView: View {
             }
             .buttonStyle(.bordered)
             .fixedSize(horizontal: true, vertical: false)
+            .disabled(!hasTitle)
         }
     }
 }
@@ -488,12 +626,13 @@ struct PageJumpSheetView: View {
                     .font(.system(size: isPadLayout ? 18 : 19, weight: .semibold))
                     .multilineTextAlignment(.center)
 
-                TextField("Seitennummer", text: $vm.pageJumpInput)
+        TextField("Seitennummer", text: $vm.pageJumpInput)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: isPadLayout ? 18 : 20))
                     .keyboardType(.numberPad)
                     .focused($isTextFieldFocused)
                     .onAppear {
+                        vm.pageJumpInput = ""
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                             isTextFieldFocused = true
                         }
@@ -542,8 +681,13 @@ struct PageJumpSheetView: View {
 
 // MARK: - iOS PDFKit UIViewRepresentable
 struct iOSPDFKitView: UIViewRepresentable {
+    let vm: PDFViewModel
     let document: PDFDocument?
     let currentPage: Int
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(vm: vm)
+    }
 
     func makeUIView(context: Context) -> PDFView {
         let view = PDFView()
@@ -552,6 +696,7 @@ struct iOSPDFKitView: UIViewRepresentable {
         view.displayDirection = .horizontal
         view.displaysPageBreaks = false
         view.usePageViewController(true, withViewOptions: nil)
+        view.delegate = context.coordinator
         view.backgroundColor = UIColor.systemBackground
         return view
     }
@@ -567,6 +712,54 @@ struct iOSPDFKitView: UIViewRepresentable {
             }
         }
     }
+
+    final class Coordinator: NSObject, PDFViewDelegate {
+        private let vm: PDFViewModel
+        private var observers: [NSObjectProtocol] = []
+
+        init(vm: PDFViewModel) {
+            self.vm = vm
+            super.init()
+            registerObservers()
+        }
+
+        deinit {
+            let center = NotificationCenter.default
+            observers.forEach { center.removeObserver($0) }
+        }
+
+        private func registerObservers() {
+            let center = NotificationCenter.default
+            observers.append(center.addObserver(forName: .PDFViewPageChanged, object: nil, queue: .main) { [weak self] notification in
+                self?.handlePageChange(notification: notification)
+            })
+            observers.append(center.addObserver(forName: .PDFViewVisiblePagesChanged, object: nil, queue: .main) { [weak self] notification in
+                self?.handlePageChange(notification: notification)
+            })
+        }
+
+        func pdfViewPageChanged(_ sender: PDFView) {
+            syncCurrentPage(from: sender)
+        }
+
+        private func handlePageChange(notification: Notification) {
+            guard let pdfView = notification.object as? PDFView else { return }
+            syncCurrentPage(from: pdfView)
+        }
+
+        private func syncCurrentPage(from pdfView: PDFView) {
+            guard let doc = pdfView.document else { return }
+
+            let page = pdfView.currentPage ?? pdfView.visiblePages.first
+            guard let page else { return }
+
+            let index = doc.index(for: page)
+            guard index >= 0, index != vm.currentPage else { return }
+
+            vm.currentPage = index
+            vm.updateStatus()
+        }
+    }
 }
 
 // MARK: - File Picker
@@ -580,6 +773,50 @@ struct DocumentPicker: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.pdf], asCopy: false)
+        picker.delegate = context.coordinator
+        picker.allowsMultipleSelection = false
+        picker.shouldShowFileExtensions = true
+        picker.modalPresentationStyle = .fullScreen
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {
+    }
+
+    final class Coordinator: NSObject, UIDocumentPickerDelegate {
+        private let onPick: (URL) -> Void
+        private let onCancel: () -> Void
+
+        init(onPick: @escaping (URL) -> Void, onCancel: @escaping () -> Void) {
+            self.onPick = onPick
+            self.onCancel = onCancel
+        }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else {
+                onCancel()
+                return
+            }
+            onPick(url)
+        }
+
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            onCancel()
+        }
+    }
+}
+
+// MARK: - Folder Picker
+struct FolderPicker: UIViewControllerRepresentable {
+    let onPick: (URL) -> Void
+    let onCancel: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick, onCancel: onCancel)
+    }
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.folder], asCopy: false)
         picker.delegate = context.coordinator
         picker.allowsMultipleSelection = false
         picker.shouldShowFileExtensions = true

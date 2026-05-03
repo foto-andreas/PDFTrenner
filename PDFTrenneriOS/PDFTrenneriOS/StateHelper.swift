@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 enum StateHelper {
     static func loadState(for pdfPath: String) -> Int {
@@ -19,6 +20,7 @@ enum StateHelper {
         let stateFile = stateFileURL(for: pdfPath)
         let content = "#PDFTrenner State\nstartPage=\(startPage)\n"
         do {
+            try FileManager.default.createDirectory(at: stateFile.deletingLastPathComponent(), withIntermediateDirectories: true)
             try content.write(to: stateFile, atomically: true, encoding: .utf8)
         } catch {
             print("Zustand konnte nicht gespeichert werden: \(error.localizedDescription)")
@@ -26,7 +28,11 @@ enum StateHelper {
     }
 
     static func stateFileURL(for pdfPath: String) -> URL {
-        let url = URL(fileURLWithPath: pdfPath)
-        return url.deletingLastPathComponent().appendingPathComponent(url.lastPathComponent + ".pdftrenner.state")
+        let baseDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let stateDirectory = baseDirectory.appendingPathComponent("PDFTrenner", isDirectory: true)
+        let digest = SHA256.hash(data: Data(pdfPath.utf8))
+        let fileName = digest.compactMap { String(format: "%02x", $0) }.joined() + ".pdftrenner.state"
+        return stateDirectory.appendingPathComponent(fileName)
     }
 }
