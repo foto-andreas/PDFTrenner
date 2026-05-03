@@ -63,7 +63,7 @@ Zentrale Zustandsverwaltung:
 | `saveSplit()` | Seiten extrahieren, speichern, nächste Startseite |
 | `runOCR()` | Asynchrone OCR im Hintergrund-Thread |
 
-**Key-Monitor**: Lokaler `NSEvent.addLocalMonitorForEvents(.keyDown)` fängt Pfeiltasten sowie `F` und `L` ab. Während die Titeleingabe aktiv ist, werden Tastenkürzel blockiert. Der Seitensprung läuft separat über ein eigenes Panel und validiert die Eingabe gegen `numPages`.
+**Key-Monitor**: Lokaler `NSEvent.addLocalMonitorForEvents(.keyDown)` fängt Pfeiltasten sowie `F`, `G` und `L` ab. Während die Titeleingabe aktiv ist, werden Tastenkürzel blockiert. Der Seitensprung läuft separat über ein eigenes Panel und validiert die Eingabe gegen `numPages`.
 
 #### TitlePanelController (`NSObject`, `NSTextFieldDelegate`)
 
@@ -186,7 +186,7 @@ Alle Fehler werden über `@Published var showError: Bool` und `.alert(isPresente
 | Titeleingabe | `NSPanel` mit `.utilityWindow` + `.floating`, positioniert rechts neben dem Hauptfenster |
 | Seitensprung | Eigenes `NSPanel` mit Seitennummer-Eingabe und Validierung |
 | Dateiauswahl | `NSOpenPanel` mit PDF-Filter |
-| Tastaturkürzel | `NSEvent.addLocalMonitorForEvents(.keyDown)` — F, L, Pfeiltasten |
+| Tastaturkürzel | `NSEvent.addLocalMonitorForEvents(.keyDown)` — F, G, L, Pfeiltasten |
 | Fenster Ende | `applicationShouldTerminateAfterLastWindowClosed → true` |
 
 ### iOS-App (PDFTrenneriOS)

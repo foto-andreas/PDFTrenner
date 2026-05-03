@@ -298,6 +298,7 @@ struct ContentView: View {
                 Button("Start+F") { vm.setFirst() }
                     .keyboardShortcut("f", modifiers: [])
                 Button("Seite") { vm.showPageJumpDialog() }
+                    .keyboardShortcut("g", modifiers: [])
                 Button("Ende+L") { vm.setLast() }
                     .keyboardShortcut("l", modifiers: [])
             }
@@ -569,6 +570,9 @@ class PDFViewModel: ObservableObject {
                 switch chars.lowercased() {
                 case "f":
                     self.setFirst()
+                    return nil
+                case "g":
+                    self.showPageJumpDialog()
                     return nil
                 case "l":
                     self.setLast()

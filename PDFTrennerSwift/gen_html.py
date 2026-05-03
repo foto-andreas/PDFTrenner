@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-import markdown, base64, os
+import base64
+import os
+
+import cairosvg
+import markdown
 
 SVG_PATH = '/Users/andreas/Workspace/PDFTrenner/PDFTrennerSwift/workflow.svg'
 with open(SVG_PATH, 'r', encoding='utf-8') as f:
     SVG_CONTENT = f.read()
 
-SVG_B64 = base64.b64encode(SVG_CONTENT.encode('utf-8')).decode('ascii')
+PNG_CONTENT = cairosvg.svg2png(bytestring=SVG_CONTENT.encode('utf-8'))
+PNG_B64 = base64.b64encode(PNG_CONTENT).decode('ascii')
 
 HTML_TEMPLATE = '''<!DOCTYPE html>
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}</title>
@@ -27,12 +32,12 @@ ul, ol {{ margin: 4px 0; padding-left: 20px; }}
 li {{ margin: 3px 0; }}
 </style></head><body>{body}</body></html>'''
 
-SVG_INLINE = f'<img src="data:image/svg+xml;base64,{SVG_B64}" alt="Workflow-Diagramm" style="max-width:100%;height:auto;display:block;margin:16px auto;border:1px solid #e0e0e0;border-radius:4px;">'
+WORKFLOW_INLINE = f'<img src="data:image/png;base64,{PNG_B64}" alt="Workflow-Diagramm" style="max-width:100%;height:auto;display:block;margin:16px auto;border:1px solid #e0e0e0;border-radius:4px;">'
 
 def convert(md_path, title):
     with open(md_path, 'r', encoding='utf-8') as f:
         md_content = f.read()
-    md_content_with_svg = md_content.replace('![Workflow-Diagramm](workflow.svg)', SVG_INLINE).replace('![Datenfluss-Diagramm](workflow.svg)', SVG_INLINE)
+    md_content_with_svg = md_content.replace('![Workflow-Diagramm](workflow.svg)', WORKFLOW_INLINE).replace('![Datenfluss-Diagramm](workflow.svg)', WORKFLOW_INLINE)
     html_body = markdown.markdown(md_content_with_svg, extensions=['tables','fenced_code','codehilite'],
         extension_configs={'codehilite':{'guess_lang':False}})
     full_html = HTML_TEMPLATE.format(title=title, body=html_body)
