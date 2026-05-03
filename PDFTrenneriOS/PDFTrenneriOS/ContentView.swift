@@ -24,6 +24,8 @@ class PDFViewModel: ObservableObject {
     @Published var showFilePicker = false
 
     var pdfPath: String?
+    private var sourceURL: URL?
+    private var isAccessingSourceURL = false
     private var numPages = 0
     private var hadSavedState = false
 
@@ -38,8 +40,11 @@ class PDFViewModel: ObservableObject {
     }
 
     func loadPDF(at url: URL) {
-        let accessing = url.startAccessingSecurityScopedResource()
-        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+        if isAccessingSourceURL, let sourceURL {
+            sourceURL.stopAccessingSecurityScopedResource()
+        }
+        self.sourceURL = url
+        isAccessingSourceURL = url.startAccessingSecurityScopedResource()
 
         let path = url.path
         splashMessage = "Lade: \(url.lastPathComponent)"
@@ -145,7 +150,7 @@ class PDFViewModel: ObservableObject {
     }
 
     func saveSplit() {
-        guard let doc = document, let path = pdfPath else { return }
+        guard let doc = document, let path = pdfPath, let sourceURL else { return }
         let title = currentTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         var safeTitle = title
             .replacingOccurrences(of: "ä", with: "ae")
@@ -161,15 +166,27 @@ class PDFViewModel: ObservableObject {
             safeTitle = "Song_Seite_\(startPage + 1)"
         }
 
-        let dir = URL(fileURLWithPath: path)
+        if !isAccessingSourceURL {
+            isAccessingSourceURL = sourceURL.startAccessingSecurityScopedResource()
+        }
+
+        let dir = sourceURL
             .deletingLastPathComponent()
             .appendingPathComponent("Manual_Splits")
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        do {
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        } catch {
+            presentError(message: "Ordner konnte nicht angelegt werden: \(error.localizedDescription)")
+            return
+        }
 
         let outFile = dir.appendingPathComponent("\(safeTitle).pdf")
 
         if let savedDoc = PDFDocumentHelper.extractPages(from: doc, start: startPage, end: endPage) {
-            savedDoc.write(to: outFile)
+            guard savedDoc.write(to: outFile) else {
+                presentError(message: "Fehler beim Speichern der Extraktion.")
+                return
+            }
 
             StateHelper.saveState(startPage: startPage == endPage ? endPage : endPage, for: path)
 
@@ -202,6 +219,12 @@ class PDFViewModel: ObservableObject {
     func presentInfo(message: String) {
         infoMessage = message
         showInfo = true
+    }
+
+    deinit {
+        if isAccessingSourceURL, let sourceURL {
+            sourceURL.stopAccessingSecurityScopedResource()
+        }
     }
 }
 
@@ -554,7 +577,7 @@ struct DocumentPicker: UIViewControllerRepresentable {
     }
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.pdf], asCopy: true)
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.pdf], asCopy: false)
         picker.delegate = context.coordinator
         picker.allowsMultipleSelection = false
         picker.shouldShowFileExtensions = true
