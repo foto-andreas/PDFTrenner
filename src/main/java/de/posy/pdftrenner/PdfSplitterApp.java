@@ -3,7 +3,6 @@ package de.posy.pdftrenner;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -18,7 +17,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.util.Duration;
+
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
@@ -32,6 +31,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+@SuppressWarnings("unused")
 public class PdfSplitterApp extends Application {
 
     private static final boolean DEBUG = Boolean.getBoolean("pdftrenner.debug");
@@ -103,7 +103,7 @@ public class PdfSplitterApp extends Application {
 
         Parameters params = getParameters();
         if (!params.getRaw().isEmpty()) {
-            File f = new File(params.getRaw().get(0));
+            File f = new File(params.getRaw().getFirst());
             pdfPath = f.getAbsolutePath();
             initPdfAndShow();
         } else {
@@ -143,9 +143,9 @@ public class PdfSplitterApp extends Application {
     }
 
     private void openFileChooserAndInit() {
-        updateSplash("Oeffne Dateiauswahl...");
+        updateSplash("Öffne Dateiauswahl...");
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("PDF-Datei auswaehlen");
+        fileChooser.setTitle("PDF-Datei auswählen");
         fileChooser.getExtensionFilters().add(
                 new FileChooser.ExtensionFilter("PDF-Dateien", "*.pdf", "*.PDF")
         );
@@ -158,7 +158,7 @@ public class PdfSplitterApp extends Application {
         } catch (Exception ex) {
             debug("Exception im FileChooser: " + ex);
             ex.printStackTrace();
-            showError("Dateiauswahl-Dialog konnte nicht ge\u00f6ffnet werden:\n" + ex.getMessage());
+            showError("Dateiauswahl-Dialog konnte nicht geöffnet werden:\n" + ex.getMessage());
         }
         debug("FileChooser Ergebnis: " + selectedFile);
 
@@ -341,7 +341,10 @@ public class PdfSplitterApp extends Application {
         if (currentPage < 0 || currentPage >= numPages) return;
 
         try {
-            BufferedImage bim = renderer.renderImageWithDPI(currentPage, 150);
+            BufferedImage bim;
+            synchronized (this) {
+                bim = renderer.renderImageWithDPI(currentPage, 150);
+            }
             imageView.setImage(SwingFXUtils.toFXImage(bim, null));
             updateStatus();
         } catch (IOException e) {
@@ -410,7 +413,7 @@ public class PdfSplitterApp extends Application {
                 System.out.println("Erkannter Titel: " + detectedTitle);
             }
             Platform.runLater(() -> {
-                statusLabel.setText(null);
+                statusLabel.setText("");
                 showTitleDialogForStart(detectedTitle);
             });
         }, "OCR-Thread");
@@ -449,7 +452,7 @@ public class PdfSplitterApp extends Application {
             titleStage.initStyle(StageStyle.UTILITY);
             titleStage.setResizable(false);
             titleStage.setTitle("Titel festlegen");
-            titleStage.alwaysOnTopProperty();
+            titleStage.setAlwaysOnTop(true);
 
             titleTextField = new TextField(defaultValue);
             titleTextField.setPrefWidth(320);
@@ -468,7 +471,7 @@ public class PdfSplitterApp extends Application {
 
             Label headerLabel = new Label();
             headerLabel.textProperty().bind(javafx.beans.binding.Bindings.format(
-                    "Startseite %d \u2014 Titel:", startPage + 1));
+                    "Startseite %d — Titel:", startPage + 1));
 
             HBox buttonBox = new HBox(10, cancelBtn, okBtn);
             buttonBox.setAlignment(Pos.CENTER_RIGHT);
@@ -481,7 +484,6 @@ public class PdfSplitterApp extends Application {
         titleTextField.setText(defaultValue);
         titleStage.sizeToScene();
 
-        double dialogWidth = titleStage.getWidth() <= 0 ? 400 : titleStage.getWidth();
         double dialogHeight = titleStage.getHeight() <= 0 ? 120 : titleStage.getHeight();
         double gap = 6;
         titleStage.setX(primaryStage.getX() + primaryStage.getWidth() + gap);
