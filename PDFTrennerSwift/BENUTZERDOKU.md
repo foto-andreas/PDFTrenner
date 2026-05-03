@@ -61,7 +61,7 @@ Wird automatisch geöffnet, wenn die Startseite gesetzt wird (Taste `F`). Das Ei
 
 **F** = Startseite setzen → Titeleingabe  
 **G** = direkte Seitennummer eingeben → zur Seite springen  
-**Seite** = Button für den Seitensprung  
+**Seite (G)** = Button für den Seitensprung  
 **L** = Endseite setzen → sofort speichern
 
 Nach dem Speichern wird automatisch die nächste Seite als neue Startseite vorgeschlagen und die Titeleingabe geöffnet. So kann ein komplettes PDF in einem Durchlauf aufgeteilt werden.
@@ -104,7 +104,7 @@ Sonderzeichen, die keine Buchstaben/Zahlen sind, werden entfernt. Wenn der Titel
 | `→` | Nächste Seite |
 | `F` | Startseite setzen + Titeleingabe |
 | `G` | Seitensprung-Dialog öffnen |
-| `Seite` | Button: Seitennummer eingeben und zur gewählten Seite springen |
+| `Seite (G)` | Button: Seitennummer eingeben und zur gewählten Seite springen |
 | `L` | Endseite setzen + Speichern |
 | `Enter` | Titel bestätigen (im Eingabefeld) |
 | `Esc` | Titeleingabe abbrechen |

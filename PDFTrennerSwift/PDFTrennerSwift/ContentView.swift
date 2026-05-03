@@ -295,11 +295,11 @@ struct ContentView: View {
                 Spacer()
                 Button(" ← ") { vm.prevPage() }
                 Button(" → ") { vm.nextPage() }
-                Button("Start+F") { vm.setFirst() }
+                Button("Start (F)") { vm.setFirst() }
                     .keyboardShortcut("f", modifiers: [])
-                Button("Seite") { vm.showPageJumpDialog() }
+                Button("Seite (G)") { vm.showPageJumpDialog() }
                     .keyboardShortcut("g", modifiers: [])
-                Button("Ende+L") { vm.setLast() }
+                Button("Ende (L)") { vm.setLast() }
                     .keyboardShortcut("l", modifiers: [])
             }
             .padding(8)
