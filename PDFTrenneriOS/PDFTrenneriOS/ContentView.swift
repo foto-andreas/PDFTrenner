@@ -14,6 +14,8 @@ class PDFViewModel: ObservableObject {
     @Published var splashMessage = "Anwendung wird gestartet…"
     @Published var errorMessage: String?
     @Published var showError = false
+    @Published var infoMessage: String?
+    @Published var showInfo = false
     @Published var showTitleSheet = false
     @Published var showPageJumpSheet = false
     @Published var detectedTitle = ""
@@ -180,7 +182,7 @@ class PDFViewModel: ObservableObject {
                 setFirst()
             } else {
                 // Do not advance past the final page.
-                presentError(message: "Letzte Seite erreicht.")
+                presentInfo(message: "Letzte Seite erreicht.")
             }
         } else {
             presentError(message: "Fehler beim Speichern der Extraktion.")
@@ -195,6 +197,11 @@ class PDFViewModel: ObservableObject {
     func presentError(message: String) {
         errorMessage = message
         showError = true
+    }
+
+    func presentInfo(message: String) {
+        infoMessage = message
+        showInfo = true
     }
 }
 
@@ -242,6 +249,11 @@ struct ContentView: View {
             Button("OK", role: .cancel) { vm.errorMessage = nil }
         } message: {
             Text(vm.errorMessage ?? "")
+        }
+        .alert("Information", isPresented: $vm.showInfo) {
+            Button("OK", role: .cancel) { vm.infoMessage = nil }
+        } message: {
+            Text(vm.infoMessage ?? "")
         }
         .onAppear { vm.onAppear() }
     }

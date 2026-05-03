@@ -242,6 +242,13 @@ struct ContentView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        .alert("Information", isPresented: $vm.showInfo) {
+            Button("OK", role: .cancel) {
+                vm.infoMessage = nil
+            }
+        } message: {
+            Text(vm.infoMessage ?? "")
+        }
     }
 
     // MARK: - Splash
@@ -351,6 +358,8 @@ class PDFViewModel: ObservableObject {
     @Published var splashMessage = "Anwendung wird gestartet…"
     @Published var errorMessage: String?
     @Published var showError = false
+    @Published var infoMessage: String?
+    @Published var showInfo = false
     @Published var errorDetail = ErrorDetail(message: "")
     @Published var showSaveDialog = false
     @Published var showPageJumpPanel = false
@@ -535,8 +544,7 @@ class PDFViewModel: ObservableObject {
                 setFirst()
             } else {
                 // Do not advance past the final page.
-                let msg = "Letzte Seite erreicht."
-                presentError(message: msg)
+                presentInfo(message: "Letzte Seite erreicht.")
             }
         } else {
             let msg = "Fehler beim Speichern der Extraktion."
@@ -552,6 +560,11 @@ class PDFViewModel: ObservableObject {
     func presentError(message: String) {
         errorDetail = ErrorDetail(message: message)
         showError = true
+    }
+
+    func presentInfo(message: String) {
+        infoMessage = message
+        showInfo = true
     }
 
     // MARK: - Key Monitor
