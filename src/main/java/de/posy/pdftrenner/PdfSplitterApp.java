@@ -521,13 +521,15 @@ public class PdfSplitterApp extends Application {
             System.out.println("Erfolgreich extrahiert: " + outFile.getAbsolutePath());
 
             saveState();
-            if (end < numPages - 1) {
+            boolean hasNextPage = end < numPages - 1;
+            if (hasNextPage) {
                 currentPage = end + 1;
                 startPage = currentPage;
                 currentTitle = "";
                 showPage();
                 setFirst();
             } else {
+                // Do not advance past the final page.
                 Alert alert = new Alert(Alert.AlertType.INFORMATION, "Letzte Seite erreicht.");
                 alert.initOwner(primaryStage);
                 alert.initModality(Modality.WINDOW_MODAL);

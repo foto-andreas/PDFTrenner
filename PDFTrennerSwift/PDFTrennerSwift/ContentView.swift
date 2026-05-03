@@ -526,13 +526,15 @@ class PDFViewModel: ObservableObject {
 
             StateHelper.saveState(startPage: startPage == endPage ? endPage : endPage, for: path)
 
-            if endPage < numPages - 1 {
+            let hasNextPage = endPage < numPages - 1
+            if hasNextPage {
                 currentPage = endPage + 1
                 startPage = currentPage
                 currentTitle = ""
                 updateStatus()
                 setFirst()
             } else {
+                // Do not advance past the final page.
                 let msg = "Letzte Seite erreicht."
                 presentError(message: msg)
             }
