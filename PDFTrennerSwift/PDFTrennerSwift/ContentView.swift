@@ -1,10 +1,11 @@
 import SwiftUI
 import PDFKit
 
-class TitlePanelController: NSObject, NSTextFieldDelegate {
+class TitlePanelController: NSObject, NSTextFieldDelegate, NSWindowDelegate {
     private var panel: NSPanel?
     private weak var vm: PDFViewModel?
     private var textField: NSTextField?
+    private var isProgrammaticClose = false
 
     func show(vm: PDFViewModel, mainWindow: NSWindow?) {
         close()
@@ -16,6 +17,7 @@ class TitlePanelController: NSObject, NSTextFieldDelegate {
         myPanel.title = "Titel festlegen"
         myPanel.isFloatingPanel = true
         myPanel.level = .floating
+        myPanel.delegate = self
 
         let headerLabel = NSTextField(labelWithString: "Startseite \(vm.startPage + 1) — Titel:")
         headerLabel.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
@@ -70,8 +72,11 @@ class TitlePanelController: NSObject, NSTextFieldDelegate {
 
     func close() {
         textField = nil
-        panel?.close()
-        panel = nil
+        guard let panel else { return }
+        isProgrammaticClose = true
+        panel.close()
+        isProgrammaticClose = false
+        self.panel = nil
     }
 
     func updateTextField(_ text: String) {
@@ -82,15 +87,11 @@ class TitlePanelController: NSObject, NSTextFieldDelegate {
 
     @objc private func confirmAction() {
         guard let textField = panel?.contentView?.viewWithTag(100) as? NSTextField else { return }
-        vm?.currentTitle = textField.stringValue
-        vm?.showSaveDialog = false
-        vm?.updateStatus()
+        vm?.confirmTitle(textField.stringValue)
     }
 
     @objc private func cancelAction() {
-        vm?.currentTitle = ""
-        vm?.showSaveDialog = false
-        vm?.updateStatus()
+        vm?.cancelTitleSelection()
     }
 
     func controlTextDidEndEditing(_ obj: Notification) {
@@ -98,6 +99,14 @@ class TitlePanelController: NSObject, NSTextFieldDelegate {
         if let event = NSApp.currentEvent, event.type == .keyDown, event.specialKey == .carriageReturn {
             confirmAction()
         }
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        textField = nil
+        panel = nil
+        guard !isProgrammaticClose else { return }
+        guard vm?.showSaveDialog == true else { return }
+        vm?.cancelTitleSelection()
     }
 }
 
@@ -223,7 +232,7 @@ struct ContentView: View {
             }
         }
         .onReceive(vm.$detectedTitle) { title in
-            if !title.isEmpty {
+            if vm.showSaveDialog, !title.isEmpty {
                 titlePanelController.updateTextField(title)
             }
         }
@@ -370,6 +379,7 @@ class PDFViewModel: ObservableObject {
     private var numPages = 0
     private var keyMonitor: Any?
     private var hadSavedState = false
+    private var ocrRequestID = 0
 
     func onAppear() {
         let args = CommandLine.arguments
@@ -481,7 +491,22 @@ class PDFViewModel: ObservableObject {
         print("Startseite gesetzt auf: \(startPage + 1)")
         detectedTitle = ""
         showSaveDialog = true
-        runOCR()
+        let requestID = nextOCRRequestID()
+        runOCR(for: startPage, requestID: requestID)
+    }
+
+    func confirmTitle(_ title: String) {
+        currentTitle = title
+        showSaveDialog = false
+        updateStatus()
+    }
+
+    func cancelTitleSelection() {
+        currentTitle = ""
+        detectedTitle = ""
+        invalidatePendingOCR()
+        showSaveDialog = false
+        updateStatus()
     }
 
     func setLast() {
@@ -494,15 +519,26 @@ class PDFViewModel: ObservableObject {
         saveSplit()
     }
 
-    private func runOCR() {
-        guard let doc = document, startPage < doc.pageCount else { return }
-        let page = startPage
+    private func runOCR(for page: Int, requestID: Int) {
+        guard let doc = document, page >= 0, page < doc.pageCount else { return }
+        guard let croppedImage = OCRHelper.captureTitleImage(from: doc, pageIndex: page) else { return }
+
         DispatchQueue.global(qos: .userInitiated).async {
-            let title = OCRHelper.recognizeTitle(from: doc, pageIndex: page)
+            let title = OCRHelper.recognizeTitle(from: croppedImage)
             DispatchQueue.main.async {
+                guard requestID == self.ocrRequestID else { return }
                 self.detectedTitle = title
             }
         }
+    }
+
+    private func nextOCRRequestID() -> Int {
+        ocrRequestID += 1
+        return ocrRequestID
+    }
+
+    private func invalidatePendingOCR() {
+        ocrRequestID += 1
     }
 
     func saveSplit() {

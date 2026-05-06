@@ -3,8 +3,8 @@ import AppKit
 import Vision
 
 enum OCRHelper {
-    static func recognizeTitle(from document: PDFDocument, pageIndex: Int) -> String {
-        guard let page = document.page(at: pageIndex) else { return "" }
+    static func captureTitleImage(from document: PDFDocument, pageIndex: Int) -> CGImage? {
+        guard let page = document.page(at: pageIndex) else { return nil }
 
         let cropRect = page.bounds(for: .mediaBox)
         let cropHeight = cropRect.size.height * 0.10
@@ -12,9 +12,20 @@ enum OCRHelper {
 
         guard let cgImage = renderCroppedImage(from: page, rect: croppedRect) else {
             print("OCR: konnte kein Bild rendern")
-            return ""
+            return nil
         }
 
+        return cgImage
+    }
+
+    static func recognizeTitle(from image: CGImage) -> String {
+        performVisionOCR(on: image)
+    }
+
+    static func recognizeTitle(from document: PDFDocument, pageIndex: Int) -> String {
+        guard let cgImage = captureTitleImage(from: document, pageIndex: pageIndex) else {
+            return ""
+        }
         return performVisionOCR(on: cgImage)
     }
 
